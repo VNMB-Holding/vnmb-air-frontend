@@ -154,8 +154,7 @@ export default function Home() {
               </div>
 
               <Button
-                color="primary"
-                radius="xl"
+                variant="primary"
                 className="bg-blue-600 text-white font-medium text-xs px-5 shadow-lg shadow-blue-600/25 hover:bg-blue-500 hover:scale-[1.02] active:scale-[0.98] transition-all"
               >
                 + Agendar Voo
