@@ -4,8 +4,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-sans: "font", sans-serif;
-  --font-mono: "monospace", monospace;
+  --font-sans: var(--font-sans), sans-serif;
+  --font-mono: var(--font-mono), monospace;
 }
 
 /* Glassmorphic Toast Theme Customizations */
@@ -126,8 +126,15 @@ aside {
 
 /* Sidebar nav item pulse on active */
 @keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.07); }
-  50%       { box-shadow: 0 0 18px 2px rgba(255,255,255,0.1); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.07);
+  }
+
+  50% {
+    box-shadow: 0 0 18px 2px rgba(255, 255, 255, 0.1);
+  }
 }
 
 .sidebar-item-active {
@@ -152,4 +159,68 @@ aside {
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+/* Custom Scrollbar for light panels */
+.light-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.light-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 8px;
+}
+
+.light-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+}
+
+.light-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* Glass interactive utilities */
+.glass-card-hover {
+  transition: all 0.2s ease-in-out !important;
+}
+
+.glass-card-hover:hover {
+  background: rgba(255, 255, 255, 0.09) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25) !important;
+  transform: translateY(-1px);
+}
+
+.glass-button-primary {
+  background: #2563eb !important;
+  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.3) !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.glass-button-primary:hover {
+  background: #3b82f6 !important;
+  box-shadow: 0 4px 25px rgba(59, 130, 246, 0.45) !important;
+  transform: translateY(-1px);
+}
+
+@keyframes livePulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(37, 99, 235, 0), 0 8px 30px rgba(0, 0, 0, 0.02);
+    border-color: rgba(37, 99, 235, 0.2);
+  }
+
+  50% {
+    box-shadow: 0 0 16px rgba(37, 99, 235, 0.25), 0 8px 30px rgba(0, 0, 0, 0.02);
+    border-color: rgba(37, 99, 235, 0.6);
+  }
+}
+
+.flight-live {
+  animation: livePulse 2.5s ease-in-out infinite;
+  border-width: 1.5px !important;
+  border-color: rgba(37, 99, 235, 0.3) !important;
 }
