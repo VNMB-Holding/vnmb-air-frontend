@@ -2,29 +2,35 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useSearchParams, useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, Suspense } from "react";
 import { SvgIcon } from "@/components/SvgIcon";
 import { Tabs, Avatar, Badge } from "@heroui/react";
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
-  const searchParams = useSearchParams();
+  const pathname = usePathname();
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Active tab selection
-  const currentTab = searchParams.get("tab") || "bookings";
-
   const menuItems = [
-    { id: "bookings", label: "Home", icon: "ticket-01" },
-    { id: "calendar", label: "Calendário", icon: "calendar" },
-    { id: "aircraft", label: "Aeronaves", icon: "plane" },
-    { id: "pilots", label: "Pilotos", icon: "user-01" },
-    { id: "reports", label: "Relatórios", icon: "bar-chart-02" },
+    { id: "home", label: "Home", icon: "home-01", path: "/" },
+    { id: "calendar", label: "Calendário", icon: "calendar", path: "/calendar" },
+    { id: "aircraft", label: "Aeronaves", icon: "plane", path: "/aircraft" },
+    { id: "pilots", label: "Pilotos", icon: "user-01", path: "/pilots" },
+    { id: "reports", label: "Relatórios", icon: "bar-chart-02", path: "/reports" },
   ];
 
+  // Active tab selection based on current route pathname
+  const activeItem = menuItems.find(
+    (item) => pathname === item.path || (item.path !== "/" && pathname.startsWith(item.path + "/"))
+  );
+  const currentTab = activeItem ? activeItem.id : "home";
+
   const handleTabClick = (tabId: string) => {
-    router.push(`/?tab=${tabId}`);
+    const item = menuItems.find((i) => i.id === tabId);
+    if (item) {
+      router.push(item.path);
+    }
     setIsMobileMenuOpen(false);
   };
 
