@@ -11,6 +11,34 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+
+  const notifications = [
+    {
+      id: 1,
+      title: "Plano de Voo Aprovado",
+      desc: "Rota PR-VNM (GRU → MIA) aprovada pela ANAC.",
+      time: "10 min atrás",
+      type: "success",
+      icon: "clipboard-check",
+    },
+    {
+      id: 2,
+      title: "Alerta de Tripulação",
+      desc: "Exame médico do Capt. Carlos expirando em breve.",
+      time: "2 horas atrás",
+      type: "warning",
+      icon: "user-01",
+    },
+    {
+      id: 3,
+      title: "Clima em Destino",
+      desc: "Ventos fortes de cauda reportados no Galeão (GIG).",
+      time: "5 horas atrás",
+      type: "info",
+      icon: "activity",
+    },
+  ];
 
   const menuItems = [
     { id: "home", label: "Home", icon: "home-01", path: "/" },
@@ -83,14 +111,53 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           </Tabs>
 
           {/* Right Section: Search, Notification, Profile */}
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden xl:flex items-center gap-4">
             {/* Notification Bell */}
-            <Badge.Anchor>
-              <button className="bg-white/50 relative p-2 rounded-full text-slate-500 transition-colors flex items-center justify-center">
-                <SvgIcon name="bell-02" className="w-5 h-5" />
-              </button>
-              <Badge color="danger" size="sm" />
-            </Badge.Anchor>
+            <div className="relative">
+              <Badge.Anchor>
+                <button
+                  onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                  className="bg-white/50 relative p-2 rounded-full text-slate-500 hover:text-slate-800 transition-colors flex items-center justify-center active:scale-95"
+                >
+                  <SvgIcon name="bell-02" className="w-5 h-5" />
+                </button>
+                <Badge color="danger" size="sm" />
+              </Badge.Anchor>
+
+              {isNotificationsOpen && (
+                <div className="absolute right-0 mt-3.5 w-80 bg-white/95 border border-slate-200/60 backdrop-blur-2xl rounded-3xl p-4 shadow-xl z-50 flex flex-col gap-3 animate-fade-in">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100/50">
+                    <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">Notificações</span>
+                    <button
+                      onClick={() => setIsNotificationsOpen(false)}
+                      className="text-[10px] font-bold text-blue-600 hover:underline"
+                    >
+                      Limpar
+                    </button>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {notifications.map((n) => (
+                      <div key={n.id} className="flex gap-3 p-2 rounded-2xl hover:bg-slate-50/60 transition-colors cursor-pointer">
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border ${
+                          n.type === "success"
+                            ? "bg-emerald-50 text-emerald-600 border-emerald-100/50"
+                            : n.type === "warning"
+                            ? "bg-amber-50 text-amber-600 border-amber-100/50"
+                            : "bg-blue-50 text-blue-600 border-blue-100/50"
+                        }`}>
+                          <SvgIcon name={n.icon} className="w-4.5 h-4.5" />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-xs font-bold text-slate-700 leading-snug">{n.title}</span>
+                          <span className="text-[10px] text-slate-400 font-light mt-0.5 leading-relaxed">{n.desc}</span>
+                          <span className="text-[9px] text-slate-500 font-mono mt-1">{n.time}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div className="flex items-center gap-2 border-l border-slate-200/50 pl-4 ml-2">
               <Avatar className="w-9 h-9">
@@ -105,10 +172,49 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           {/* Hamburger (Mobile/Tablet) */}
           <div className="flex xl:hidden items-center gap-3">
             {/* Notification Indicator (compact) */}
-            <button className="relative p-2 text-slate-500 hover:text-slate-800 rounded-full bg-white/30 flex items-center justify-center">
-              <SvgIcon name="bell-02" className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-500 rounded-full" />
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                className="relative p-2 text-slate-500 hover:text-slate-800 rounded-full bg-white/30 flex items-center justify-center active:scale-95"
+              >
+                <SvgIcon name="bell-02" className="w-5 h-5" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-500 rounded-full" />
+              </button>
+
+              {isNotificationsOpen && (
+                <div className="absolute right-0 mt-3.5 w-76 bg-white/95 border border-slate-200/60 backdrop-blur-2xl rounded-3xl p-4 shadow-xl z-50 flex flex-col gap-3 animate-fade-in">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100/50">
+                    <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">Notificações</span>
+                    <button
+                      onClick={() => setIsNotificationsOpen(false)}
+                      className="text-[10px] font-bold text-blue-600 hover:underline"
+                    >
+                      Limpar
+                    </button>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {notifications.map((n) => (
+                      <div key={n.id} className="flex gap-3 p-2 rounded-2xl hover:bg-slate-50/60 transition-colors cursor-pointer">
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border ${
+                          n.type === "success"
+                            ? "bg-emerald-50 text-emerald-600 border-emerald-100/50"
+                            : n.type === "warning"
+                            ? "bg-amber-50 text-amber-600 border-amber-100/50"
+                            : "bg-blue-50 text-blue-600 border-blue-100/50"
+                        }`}>
+                          <SvgIcon name={n.icon} className="w-4.5 h-4.5" />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-xs font-bold text-slate-700 leading-snug">{n.title}</span>
+                          <span className="text-[10px] text-slate-400 font-light mt-0.5 leading-relaxed">{n.desc}</span>
+                          <span className="text-[9px] text-slate-500 font-mono mt-1">{n.time}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Hamburger Button */}
             <button
