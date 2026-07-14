@@ -66,9 +66,8 @@ export default function ReportsPage() {
               <span className="text-xs text-slate-400 font-semibold tracking-wide">{metric.title}</span>
               <span className="text-2xl font-extrabold text-slate-800 mt-2">{metric.value}</span>
               <span
-                className={`text-[10px] font-bold mt-1.5 flex items-center gap-1 ${
-                  metric.changeType === "up" ? "text-emerald-600" : "text-rose-600"
-                }`}
+                className={`text-[10px] font-bold mt-1.5 flex items-center gap-1 ${metric.changeType === "up" ? "text-emerald-600" : "text-rose-600"
+                  }`}
               >
                 {metric.changeType === "up" ? "↑" : "↓"} {metric.change}
                 <span className="text-slate-400 font-light ml-0.5">vs. mês passado</span>
