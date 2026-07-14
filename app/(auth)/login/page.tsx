@@ -159,14 +159,12 @@ export default function LoginPage() {
                 >
                   {/* Custom Apple-like Switch */}
                   <div
-                    className={`relative w-8 h-4.5 rounded-full transition-colors duration-250 ease-in-out border border-white/5 ${
-                      rememberMe ? "bg-blue-600" : "bg-white/10"
-                    }`}
+                    className={`relative w-8 h-4.5 rounded-full transition-colors duration-250 ease-in-out border border-white/5 ${rememberMe ? "bg-blue-600" : "bg-white/10"
+                      }`}
                   >
                     <div
-                      className={`absolute top-[2px] left-[2px] w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-250 ease-in-out ${
-                        rememberMe ? "translate-x-3.5" : "translate-x-0"
-                      }`}
+                      className={`absolute top-[2px] left-[2px] w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-250 ease-in-out ${rememberMe ? "translate-x-3.5" : "translate-x-0"
+                        }`}
                     />
                   </div>
                   <span className="text-[11px] text-white/75 font-light leading-none">
