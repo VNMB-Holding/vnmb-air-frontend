@@ -3,15 +3,25 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect } from "react";
 import { SvgIcon } from "@/components/SvgIcon";
-import { Tabs, Avatar, Badge } from "@heroui/react";
+import { Tabs, Avatar, Badge, Dropdown, Label, Popover, Separator, toast, Spinner } from "@heroui/react";
+import { ArrowRightFromSquare, Gear, Person } from "@gravity-ui/icons";
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  useEffect(() => {
+    setIsTransitioning(true);
+    const timer = setTimeout(() => {
+      setIsTransitioning(false);
+    }, 400); // tempo suave de transição
+
+    return () => clearTimeout(timer);
+  }, [pathname]);
 
   const notifications = [
     {
@@ -113,38 +123,30 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           {/* Right Section: Search, Notification, Profile */}
           <div className="hidden xl:flex items-center gap-4">
             {/* Notification Bell */}
-            <div className="relative">
+            <Popover>
               <Badge.Anchor>
-                <button
-                  onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-                  className="bg-white/50 relative p-2 rounded-full text-slate-500 hover:text-slate-800 transition-colors flex items-center justify-center active:scale-95"
-                >
+                <Popover.Trigger className="bg-white/50 relative p-2 rounded-full text-slate-500 hover:text-slate-800 transition-colors flex items-center justify-center active:scale-95 cursor-pointer">
                   <SvgIcon name="bell-02" className="w-5 h-5" />
-                </button>
+                </Popover.Trigger>
                 <Badge color="danger" size="sm" />
               </Badge.Anchor>
-
-              {isNotificationsOpen && (
-                <div className="absolute right-0 mt-3.5 w-80 bg-white/95 border border-slate-200/60 backdrop-blur-2xl rounded-3xl p-4 shadow-xl z-50 flex flex-col gap-3 animate-fade-in">
+              <Popover.Content placement="bottom end" className="w-80 bg-white/95 border border-slate-200/60 backdrop-blur-2xl rounded-3xl p-0 shadow-xl z-50">
+                <Popover.Dialog className="outline-none p-4 flex flex-col gap-3">
                   <div className="flex items-center justify-between pb-2 border-b border-slate-100/50">
                     <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">Notificações</span>
-                    <button
-                      onClick={() => setIsNotificationsOpen(false)}
-                      className="text-[10px] font-bold text-blue-600 hover:underline"
-                    >
+                    <button className="text-[10px] font-bold text-blue-600 hover:underline">
                       Limpar
                     </button>
                   </div>
                   <div className="flex flex-col gap-2">
                     {notifications.map((n) => (
                       <div key={n.id} className="flex gap-3 p-2 rounded-2xl hover:bg-slate-50/60 transition-colors cursor-pointer">
-                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border ${
-                          n.type === "success"
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border ${n.type === "success"
                             ? "bg-emerald-50 text-emerald-600 border-emerald-100/50"
                             : n.type === "warning"
-                            ? "bg-amber-50 text-amber-600 border-amber-100/50"
-                            : "bg-blue-50 text-blue-600 border-blue-100/50"
-                        }`}>
+                              ? "bg-amber-50 text-amber-600 border-amber-100/50"
+                              : "bg-blue-50 text-blue-600 border-blue-100/50"
+                          }`}>
                           <SvgIcon name={n.icon} className="w-4.5 h-4.5" />
                         </div>
                         <div className="flex flex-col min-w-0">
@@ -155,53 +157,101 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
-            </div>
+                </Popover.Dialog>
+              </Popover.Content>
+            </Popover>
 
             <div className="flex items-center gap-2 border-l border-slate-200/50 pl-4 ml-2">
-              <Avatar className="w-9 h-9">
-                <Avatar.Image src="/images/avatar.jpg" />
-                <Avatar.Fallback className="bg-white text-slate-700 font-bold text-xs border border-slate-200/60 shadow-xs">
-                  JS
-                </Avatar.Fallback>
-              </Avatar>
+              <Dropdown>
+                <Dropdown.Trigger className="rounded-full cursor-pointer">
+                  <Avatar className="w-9 h-9">
+                    <Avatar.Image src="/images/avatar.jpg" />
+                    <Avatar.Fallback className="bg-white text-slate-700 font-bold text-xs border border-slate-200/60 shadow-xs">
+                      BS
+                    </Avatar.Fallback>
+                  </Avatar>
+                </Dropdown.Trigger>
+                <Dropdown.Popover className="border border-slate-200 shadow-lg rounded-2xl bg-white/95 backdrop-blur-xl">
+                  <div className="px-3 pt-3 pb-1">
+                    <div className="flex items-center gap-2">
+                      <Avatar size="sm">
+                        <Avatar.Image src="/images/avatar.jpg" />
+                        <Avatar.Fallback className="bg-white text-slate-700 font-bold text-xs border border-slate-200/60 shadow-xs">
+                          BS
+                        </Avatar.Fallback>
+                      </Avatar>
+                      <div className="flex flex-col gap-0">
+                        <p className="text-sm leading-5 font-medium text-slate-800">Breno Souza</p>
+                        <p className="text-xs leading-none text-slate-400">breno@vnmb.com.br</p>
+                      </div>
+                    </div>
+                  </div>
+                  <Dropdown.Menu
+                    className="p-1"
+                    onAction={(key) => {
+                      switch (key) {
+                        case "dashboard":
+                          router.push("/");
+                          break;
+                        case "settings":
+                          router.push("/settings");
+                          break;
+                        case "logout":
+                          router.push("/login");
+                          break;
+                      }
+                    }}
+                  >
+                    <Dropdown.Item id="dashboard" textValue="Painel" className="px-3 py-2 rounded-xl text-xs hover:bg-blue-50/50 cursor-pointer transition-all">
+                      <div className="flex w-full items-center justify-between gap-2">
+                        <Label className="cursor-pointer text-slate-700">Painel Operacional</Label>
+                        <SvgIcon name="home-01" className="w-3.5 h-3.5 text-slate-400" />
+                      </div>
+                    </Dropdown.Item>
+                    <Dropdown.Item id="settings" textValue="Configurações" className="px-3 py-2 rounded-xl text-xs hover:bg-blue-50/50 cursor-pointer transition-all">
+                      <div className="flex w-full items-center justify-between gap-2">
+                        <Label className="cursor-pointer text-slate-700">Configurações</Label>
+                        <Gear className="size-3.5 text-slate-400" />
+                      </div>
+                    </Dropdown.Item>
+                    <Separator className="my-1" />
+                    <Dropdown.Item id="logout" textValue="Sair" variant="danger" className="px-3 py-2 rounded-xl text-xs hover:bg-red-50/50 cursor-pointer transition-all">
+                      <div className="flex w-full items-center justify-between gap-2">
+                        <Label className="cursor-pointer text-red-600">Sair</Label>
+                        <ArrowRightFromSquare className="size-3.5 text-red-600" />
+                      </div>
+                    </Dropdown.Item>
+                  </Dropdown.Menu>
+                </Dropdown.Popover>
+              </Dropdown>
             </div>
           </div>
 
           {/* Hamburger (Mobile/Tablet) */}
           <div className="flex xl:hidden items-center gap-3">
             {/* Notification Indicator (compact) */}
-            <div className="relative">
-              <button
-                onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-                className="relative p-2 text-slate-500 hover:text-slate-800 rounded-full bg-white/30 flex items-center justify-center active:scale-95"
-              >
+            <Popover>
+              <Popover.Trigger className="relative p-2 text-slate-500 hover:text-slate-800 rounded-full bg-white/30 flex items-center justify-center active:scale-95 cursor-pointer">
                 <SvgIcon name="bell-02" className="w-5 h-5" />
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-500 rounded-full" />
-              </button>
-
-              {isNotificationsOpen && (
-                <div className="absolute right-0 mt-3.5 w-76 bg-white/95 border border-slate-200/60 backdrop-blur-2xl rounded-3xl p-4 shadow-xl z-50 flex flex-col gap-3 animate-fade-in">
+              </Popover.Trigger>
+              <Popover.Content placement="bottom end" className="w-76 bg-white/95 border border-slate-200/60 backdrop-blur-2xl rounded-3xl p-0 shadow-xl z-50">
+                <Popover.Dialog className="outline-none p-4 flex flex-col gap-3">
                   <div className="flex items-center justify-between pb-2 border-b border-slate-100/50">
                     <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">Notificações</span>
-                    <button
-                      onClick={() => setIsNotificationsOpen(false)}
-                      className="text-[10px] font-bold text-blue-600 hover:underline"
-                    >
+                    <button className="text-[10px] font-bold text-blue-600 hover:underline">
                       Limpar
                     </button>
                   </div>
                   <div className="flex flex-col gap-2">
                     {notifications.map((n) => (
                       <div key={n.id} className="flex gap-3 p-2 rounded-2xl hover:bg-slate-50/60 transition-colors cursor-pointer">
-                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border ${
-                          n.type === "success"
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border ${n.type === "success"
                             ? "bg-emerald-50 text-emerald-600 border-emerald-100/50"
                             : n.type === "warning"
-                            ? "bg-amber-50 text-amber-600 border-amber-100/50"
-                            : "bg-blue-50 text-blue-600 border-blue-100/50"
-                        }`}>
+                              ? "bg-amber-50 text-amber-600 border-amber-100/50"
+                              : "bg-blue-50 text-blue-600 border-blue-100/50"
+                          }`}>
                           <SvgIcon name={n.icon} className="w-4.5 h-4.5" />
                         </div>
                         <div className="flex flex-col min-w-0">
@@ -212,9 +262,9 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
-            </div>
+                </Popover.Dialog>
+              </Popover.Content>
+            </Popover>
 
             {/* Hamburger Button */}
             <button
@@ -254,6 +304,12 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 
         {/* Main Scrolling Pane (using custom scrollbar) */}
         <main className="flex-grow overflow-y-auto light-scrollbar flex flex-col relative">
+          {isTransitioning ? (
+            <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-blue-900/10 backdrop-blur-md animate-fade-in transition-all">
+              <Spinner size="lg" color="current" className="text-blue-900" />
+              <span className="font-semibold text-blue-900 text-xs">Carregando dados...</span>
+            </div>
+          ) : null}
           <div className="flex-grow p-6 md:p-10 lg:p-12 w-full max-w-[1600px] mx-auto flex flex-col">
             {children}
           </div>
@@ -265,11 +321,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <Suspense fallback={
-      <div className="w-screen h-screen flex items-center justify-center bg-[#F5F8FD]">
-        <div className="animate-pulse text-slate-400 font-light text-sm">Carregando painel...</div>
-      </div>
-    }>
+    <Suspense fallback={null}>
       <LayoutContent>{children}</LayoutContent>
     </Suspense>
   );
