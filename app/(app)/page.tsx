@@ -17,11 +17,16 @@ import {
   useFilter,
   Card,
   Chip,
-  Tooltip,
+  Spinner,
+  Modal,
+  TextField,
+  Input,
+  Separator,
+  TextArea
 } from "@heroui/react";
 import type { Key } from "@heroui/react";
 import { SvgIcon } from "@/components/SvgIcon";
-import { CalendarDate } from "@internationalized/date";
+import { CalendarDateTime } from "@internationalized/date";
 
 const airports = [
   { id: "GRU", name: "São Paulo (GRU)", code: "GRU", city: "São Paulo", country: "Brasil" },
@@ -44,11 +49,12 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<string>("voos");
   const [originKey, setOriginKey] = useState<Key | null>("GRU");
   const [destinationKey, setDestinationKey] = useState<Key | null>("MIA");
-  const [departDate, setDepartDate] = useState<CalendarDate | null>(new CalendarDate(2026, 3, 24));
-  const [returnDate, setReturnDate] = useState<CalendarDate | null>(new CalendarDate(2026, 3, 28));
+  const [departDate, setDepartDate] = useState<CalendarDateTime | null>(new CalendarDateTime(2026, 3, 24, 9, 0));
+  const [returnDate, setReturnDate] = useState<CalendarDateTime | null>(new CalendarDateTime(2026, 3, 28, 18, 0));
   const [tripType, setTripType] = useState("round");
   const [sortBy, setSortBy] = useState<Key>("Recomendados");
   const [isSearching, setIsSearching] = useState(false);
+  const [isSearchingLoading, setIsSearchingLoading] = useState(false);
 
   // States for AI Routing simulation
   const [routeOrigin, setRouteOrigin] = useState<Key | null>("GRU");
@@ -65,25 +71,30 @@ export default function Home() {
     setDestinationKey(temp);
   };
 
+  const [isOpenModalCadastro, setIsOpenModalCadastro] = useState(false);
+  const [cadastroPiloto, setCadastroPiloto] = useState<Key>("carlos");
+  const [cadastroAeronave, setCadastroAeronave] = useState<Key>("g650");
+  const [cadastroObs, setCadastroObs] = useState("");
+
   const handleSelectFlight = (flightCode: string, route: string, price: string) => {
     toast.success("Voo selecionado!", {
       description: `Voo ${flightCode} (${route}) adicionado ao seu rascunho por ${price}.`,
     });
   };
 
-  const handleSearchFlights = () => {
+  const handleCadastrarViagem = () => {
     const orig = airports.find(a => a.id === originKey)?.name || "";
     const dest = airports.find(a => a.id === destinationKey)?.name || "";
-    setIsSearching(true);
-    toast.success("Buscando voos...", {
-      description: `Procurando conexões disponíveis de ${orig} para ${dest} em ${departDate ? departDate.toString() : ""}.`,
+    toast.success("Viagem cadastrada com sucesso!", {
+      description: `Voo de ${orig} para ${dest} registrado no sistema.`,
     });
+    setIsOpenModalCadastro(false);
   };
 
   // AI Routing Logic
   const handleCalculateRoute = () => {
     if (!routeOrigin || !routeDest || !routeAircraft) {
-      toast.error("Por favor, preencha todos os campos para o roteamento.");
+      toast("Por favor, preencha todos os campos para o roteamento.");
       return;
     }
 
@@ -189,12 +200,12 @@ export default function Home() {
               Somente Ida
             </button>
           </div>
-          {isSearching && (
+          {(isSearching || isSearchingLoading) && (
             <Button
               size="sm"
-              variant="light"
-              className="text-slate-400 hover:text-blue-500 text-xs font-bold"
-              onClick={() => setIsSearching(false)}
+              variant="ghost"
+              className="border-none text-slate-400 hover:text-blue-500 text-xs font-bold"
+              onClick={() => { setIsSearching(false); setIsSearchingLoading(false); }}
             >
               Limpar Busca
             </Button>
@@ -249,13 +260,12 @@ export default function Home() {
           </div>
 
           {/* Swap Button */}
-          <div className="md:col-span-1 justify-self-center z-10 shrink-0 flex items-center justify-center h-[52px] mt-3 md:mt-0">
+          <div className="md:col-span-1 justify-self-center z-10 shrink-0 flex items-center justify-center h-[52px] mt-3 md:mt-0" title="Inverter aeroportos">
             <Button
               isIconOnly
               onClick={handleSwapAirports}
-              variant="flat"
-              className="bg-white border border-slate-200/40 text-slate-400 hover:text-blue-500 hover:bg-slate-50 hover:border-slate-200/80 w-11 h-11 rounded-full transition-all flex items-center justify-center min-w-0"
-              title="Inverter aeroportos"
+              variant="ghost"
+              className="border border-slate-200/40 text-slate-400 hover:text-blue-500 hover:bg-slate-50 hover:border-slate-200/80 w-11 h-11 rounded-full transition-all flex items-center justify-center min-w-0"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L17.5 12M21 7.5H7.5" />
@@ -312,17 +322,13 @@ export default function Home() {
           <DatePicker
             value={departDate}
             onChange={setDepartDate}
-            className="md:col-span-2 flex flex-col min-w-0"
+            granularity="minute"
+            className={`${tripType === "one-way" ? "md:col-span-4" : "md:col-span-2"} flex flex-col min-w-0`}
             aria-label="Data de ida"
           >
             <Label className="text-[9px] uppercase tracking-wider text-slate-400 font-semibold mb-1 pl-3">Ida</Label>
-            <DateField.Group className="bg-white border border-slate-200/40 rounded-2xl p-3 flex items-center justify-between w-full h-[52px] hover:border-slate-200/80 transition-all">
+            <DateField.Group className="bg-white border border-slate-200/40 rounded-2xl px-2 py-1 flex items-center justify-between w-full h-[52px] hover:border-slate-200/80 transition-all">
               <DateField.Input>{(segment) => <DateField.Segment segment={segment} />}</DateField.Input>
-              <DateField.Suffix>
-                <DatePicker.Trigger className="text-slate-400 hover:text-slate-600">
-                  <DatePicker.TriggerIndicator />
-                </DatePicker.Trigger>
-              </DateField.Suffix>
             </DateField.Group>
             <DatePicker.Popover className="border border-slate-200 shadow-lg rounded-2xl bg-white/95 backdrop-blur-xl">
               <Calendar aria-label="Data de ida">
@@ -345,56 +351,167 @@ export default function Home() {
           </DatePicker>
 
           {/* Return Date */}
-          <DatePicker
-            value={returnDate}
-            onChange={setReturnDate}
-            className="md:col-span-2 flex flex-col min-w-0"
-            aria-label="Data de volta"
-          >
-            <Label className="text-[9px] uppercase tracking-wider text-slate-400 font-semibold mb-1 pl-3">Volta</Label>
-            <DateField.Group className="bg-white border border-slate-200/40 rounded-2xl p-3 flex items-center justify-between w-full h-[52px] hover:border-slate-200/80 transition-all">
-              <DateField.Input>{(segment) => <DateField.Segment segment={segment} />}</DateField.Input>
-              <DateField.Suffix>
-                <DatePicker.Trigger className="text-slate-400 hover:text-slate-600">
-                  <DatePicker.TriggerIndicator />
-                </DatePicker.Trigger>
-              </DateField.Suffix>
-            </DateField.Group>
-            <DatePicker.Popover className="border border-slate-200 shadow-lg rounded-2xl bg-white/95 backdrop-blur-xl">
-              <Calendar aria-label="Data de volta">
-                <Calendar.Header>
-                  <Calendar.YearPickerTrigger>
-                    <Calendar.YearPickerTriggerHeading />
-                    <Calendar.YearPickerTriggerIndicator />
-                  </Calendar.YearPickerTrigger>
-                  <Calendar.NavButton slot="previous" />
-                  <Calendar.NavButton slot="next" />
-                </Calendar.Header>
-                <Calendar.Grid>
-                  <Calendar.GridHeader>
-                    {(day) => <Calendar.HeaderCell className="text-slate-400 font-bold text-xs">{day}</Calendar.HeaderCell>}
-                  </Calendar.GridHeader>
-                  <Calendar.GridBody>{(date) => <Calendar.Cell date={date} />}</Calendar.GridBody>
-                </Calendar.Grid>
-              </Calendar>
-            </DatePicker.Popover>
-          </DatePicker>
-
-          {/* Search Button */}
-          <div className="md:col-span-1 flex md:justify-end mt-4 md:mt-0">
-            <Button
-              onClick={handleSearchFlights}
-              className="w-[52px] h-[52px] bg-blue-600 hover:bg-blue-500 text-white rounded-2xl transition-all shadow-md shadow-blue-500/20 flex items-center justify-center shrink-0 min-w-0"
-              title="Pesquisar voos"
+          {tripType === "round" && (
+            <DatePicker
+              value={returnDate}
+              onChange={setReturnDate}
+              granularity="minute"
+              className="md:col-span-2 flex flex-col min-w-0 animate-fade-in"
+              aria-label="Data de volta"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
+              <Label className="text-[9px] uppercase tracking-wider text-slate-400 font-semibold mb-1 pl-3">Volta</Label>
+              <DateField.Group className="bg-white border border-slate-200/40 rounded-2xl px-2 py-1 flex items-center justify-between w-full h-[52px] hover:border-slate-200/80 transition-all">
+                <DateField.Input>{(segment) => <DateField.Segment segment={segment} />}</DateField.Input>
+              </DateField.Group>
+              <DatePicker.Popover className="border border-slate-200 shadow-lg rounded-2xl bg-white/95 backdrop-blur-xl">
+                <Calendar aria-label="Data de volta">
+                  <Calendar.Header>
+                    <Calendar.YearPickerTrigger>
+                      <Calendar.YearPickerTriggerHeading />
+                      <Calendar.YearPickerTriggerIndicator />
+                    </Calendar.YearPickerTrigger>
+                    <Calendar.NavButton slot="previous" />
+                    <Calendar.NavButton slot="next" />
+                  </Calendar.Header>
+                  <Calendar.Grid>
+                    <Calendar.GridHeader>
+                      {(day) => <Calendar.HeaderCell className="text-slate-400 font-bold text-xs">{day}</Calendar.HeaderCell>}
+                    </Calendar.GridHeader>
+                    <Calendar.GridBody>{(date) => <Calendar.Cell date={date} />}</Calendar.GridBody>
+                  </Calendar.Grid>
+                </Calendar>
+              </DatePicker.Popover>
+            </DatePicker>
+          )}
+
+          {/* Register Button */}
+          <div className="md:col-span-1 flex md:justify-end mt-4 md:mt-0" title="Cadastrar nova viagem">
+            <Button
+              onPress={() => setIsOpenModalCadastro(true)}
+              className="w-[52px] h-[52px] bg-blue-600 hover:bg-blue-500 text-white rounded-2xl transition-all shadow-md shadow-blue-500/20 flex items-center justify-center shrink-0 min-w-0"
+            >
+              <SvgIcon name="plus" className="w-5 h-5 text-white" />
             </Button>
           </div>
         </div>
       </Card>
+
+      {/* Flight Registration Modal */}
+      <Modal>
+        <Modal.Backdrop isOpen={isOpenModalCadastro} onOpenChange={setIsOpenModalCadastro} className="bg-slate-900/40 backdrop-blur-md">
+          <Modal.Container placement="center">
+            <Modal.Dialog className="sm:max-w-lg bg-white/90 backdrop-blur-2xl border border-white/80 rounded-[32px] p-6 shadow-2xl animate-fade-in flex flex-col gap-5">
+              <Modal.CloseTrigger className="absolute right-6 top-6 text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors w-8 h-8 rounded-full flex items-center justify-center cursor-pointer" />
+              <Modal.Header className="flex gap-3.5 items-center">
+                <Modal.Icon className="bg-blue-50 text-blue-600 border border-blue-100/50 rounded-2xl w-11 h-11 flex items-center justify-center shrink-0">
+                  <SvgIcon name="plane" className="size-5 rotate-45" />
+                </Modal.Icon>
+                <div className="flex flex-col">
+                  <Modal.Heading className="text-base font-extrabold text-slate-800 leading-tight">Cadastrar Viagem Executiva</Modal.Heading>
+                  <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                    Preencha os detalhes operacionais adicionais para a frota VNMB.
+                  </p>
+                </div>
+              </Modal.Header>
+              <Modal.Body className="py-2 flex flex-col gap-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-slate-50/70 border border-slate-100/80 p-3 rounded-2xl">
+                    <span className="text-[8px] uppercase tracking-wider text-slate-400 font-bold">Origem</span>
+                    <p className="text-xs font-bold text-slate-700 mt-0.5 truncate">
+                      {airports.find(a => a.id === originKey)?.name || "Não definida"}
+                    </p>
+                  </div>
+                  <div className="bg-slate-50/70 border border-slate-100/80 p-3 rounded-2xl">
+                    <span className="text-[8px] uppercase tracking-wider text-slate-400 font-bold">Destino</span>
+                    <p className="text-xs font-bold text-slate-700 mt-0.5 truncate">
+                      {airports.find(a => a.id === destinationKey)?.name || "Não definido"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-slate-50/70 border border-slate-100/80 p-3 rounded-2xl">
+                    <span className="text-[8px] uppercase tracking-wider text-slate-400 font-bold">Partida</span>
+                    <p className="text-xs font-bold text-slate-700 mt-0.5 truncate">
+                      {departDate ? departDate.toString() : "Não definida"}
+                    </p>
+                  </div>
+                  <div className="bg-slate-50/70 border border-slate-100/80 p-3 rounded-2xl">
+                    <span className="text-[8px] uppercase tracking-wider text-slate-400 font-bold">Tipo de Viagem</span>
+                    <p className="text-xs font-bold text-slate-700 mt-0.5 truncate">
+                      {tripType === "round" ? "Ida e Volta" : "Somente Ida"}
+                    </p>
+                  </div>
+                </div>
+
+                <Separator className="my-1 bg-slate-100/80" />
+
+                {/* Pilot Selector */}
+                <div className="w-full flex flex-col">
+                  <Label className="text-[9px] uppercase tracking-wider text-slate-400 font-bold mb-1.5 pl-1">Piloto em Comando</Label>
+                  <Select
+                    selectedKey={cadastroPiloto}
+                    onSelectionChange={(key) => key && setCadastroPiloto(key)}
+                    className="w-full"
+                    aria-label="Tripulação (Piloto)"
+                  >
+                    <Select.Trigger className="bg-white border border-slate-200/40 rounded-full px-4 py-2.5 flex items-center justify-between w-full h-[46px] hover:border-slate-200/80 hover:bg-slate-50/30 transition-all text-xs font-semibold text-slate-700">
+                      <Select.Value />
+                      <Select.Indicator className="text-slate-400" />
+                    </Select.Trigger>
+                    <Select.Popover className="border border-slate-200/60 shadow-lg rounded-2xl bg-white/95 backdrop-blur-xl">
+                      <ListBox className="p-1">
+                        <ListBox.Item id="carlos" textValue="Capt. Carlos Silva" className="px-3 py-2 rounded-xl text-xs hover:bg-blue-50/50 cursor-pointer transition-all font-semibold text-slate-700">Capt. Carlos Silva</ListBox.Item>
+                        <ListBox.Item id="ana" textValue="Capt. Ana Oliveira" className="px-3 py-2 rounded-xl text-xs hover:bg-blue-50/50 cursor-pointer transition-all font-semibold text-slate-700">Capt. Ana Oliveira</ListBox.Item>
+                        <ListBox.Item id="lucas" textValue="Copiloto Lucas Costa" className="px-3 py-2 rounded-xl text-xs hover:bg-blue-50/50 cursor-pointer transition-all font-semibold text-slate-700">Copiloto Lucas Costa</ListBox.Item>
+                      </ListBox>
+                    </Select.Popover>
+                  </Select>
+                </div>
+
+                {/* Aircraft Selector */}
+                <div className="w-full flex flex-col">
+                  <Label className="text-[9px] uppercase tracking-wider text-slate-400 font-bold mb-1.5 pl-1">Aeronave Alocada</Label>
+                  <Select
+                    selectedKey={cadastroAeronave}
+                    onSelectionChange={(key) => key && setCadastroAeronave(key)}
+                    className="w-full"
+                    aria-label="Aeronave Alocada"
+                  >
+                    <Select.Trigger className="bg-white border border-slate-200/40 rounded-full px-4 py-2.5 flex items-center justify-between w-full h-[46px] hover:border-slate-200/80 hover:bg-slate-50/30 transition-all text-xs font-semibold text-slate-700">
+                      <Select.Value />
+                      <Select.Indicator className="text-slate-400" />
+                    </Select.Trigger>
+                    <Select.Popover className="border border-slate-200/60 shadow-lg rounded-2xl bg-white/95 backdrop-blur-xl">
+                      <ListBox className="p-1">
+                        {aircraftFleet.map((ac) => (
+                          <ListBox.Item key={ac.id} id={ac.id} textValue={ac.name} className="px-3 py-2 rounded-xl text-xs hover:bg-blue-50/50 cursor-pointer transition-all font-semibold text-slate-700">{ac.name}</ListBox.Item>
+                        ))}
+                      </ListBox>
+                    </Select.Popover>
+                  </Select>
+                </div>
+
+                {/* Observations */}
+                <div className="w-full flex flex-col">
+                  <Label className="text-[9px] uppercase tracking-wider text-slate-400 font-bold mb-1.5 pl-1">Observações da Operação</Label>
+                  <TextField className="w-full" name="observations" variant="secondary" value={cadastroObs} onChange={setCadastroObs}>
+                    <TextArea placeholder="Ex: Voo com diretoria, catering especial, rota meteorológica prioritária..." rows={3} className="text-xs bg-white border border-slate-200/40 rounded-2xl p-3 hover:border-slate-200/80 focus:border-blue-500 outline-none w-full transition-all text-slate-700 resize-none" />
+                  </TextField>
+                </div>
+              </Modal.Body>
+              <Modal.Footer className="flex items-center justify-end gap-3 mt-2">
+                <Button slot="close" variant="secondary" className="rounded-full px-6 py-2.5 h-10 text-xs font-bold border border-slate-200/60 hover:bg-slate-50 text-slate-600 cursor-pointer active:scale-95 transition-all">
+                  Cancelar
+                </Button>
+                <Button onPress={handleCadastrarViagem} className="bg-blue-600 hover:bg-blue-500 text-white rounded-full px-6 py-2.5 h-10 text-xs font-bold cursor-pointer active:scale-95 shadow-md shadow-blue-500/10 transition-all">
+                  Confirmar Cadastro
+                </Button>
+              </Modal.Footer>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal>
 
       {/* Dynamic Sub-Navigation Tabs governed by the custom ButtonGroup */}
       <div className="flex items-center overflow-x-auto pb-2 mt-2 custom-scrollbar -mx-2 px-2 shrink-0">
@@ -470,7 +587,12 @@ export default function Home() {
               </div>
 
               {/* SEARCH RESULTS VIEW */}
-              {isSearching ? (
+              {isSearchingLoading ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-4">
+                  <Spinner size="lg" color="accent" />
+                  <span className="text-sm font-semibold text-slate-500 animate-pulse">Buscando as melhores rotas...</span>
+                </div>
+              ) : isSearching ? (
                 <div className="flex flex-col gap-4">
                   {[
                     {
@@ -584,7 +706,7 @@ export default function Home() {
                       aircraft: "Gulfstream G650ER",
                       registration: "PR-VNM",
                       status: "Em Voo",
-                      statusColor: "primary",
+                      statusColor: "accent",
                       progress: 68,
                       pilot: "Capt. Carlos Silva",
                       depTime: "09:20",
@@ -636,8 +758,8 @@ export default function Home() {
                           <span className="text-xs font-bold text-slate-800">{flight.aircraft} ({flight.registration})</span>
                         </div>
                         <Chip
-                          color={flight.statusColor as "primary" | "warning" | "default"}
-                          variant="flat"
+                          color={flight.statusColor as "accent" | "warning" | "default"}
+                          variant="soft"
                           size="sm"
                           className="font-bold text-[10px] uppercase h-5 min-w-0"
                         >
@@ -746,14 +868,14 @@ export default function Home() {
                         <p className="text-[10px] text-slate-400">Consumo: {log.fuel}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Chip color="success" size="sm" variant="flat" className="font-bold text-[9px] h-5 min-w-0">
+                        <Chip color="success" size="sm" variant="soft" className="font-bold text-[9px] h-5 min-w-0">
                           {log.status}
                         </Chip>
-                        <Tooltip content="Baixar relatório de voo">
-                          <Button isIconOnly size="sm" variant="light" className="text-slate-400 hover:text-blue-500 rounded-lg min-w-0 w-8 h-8">
+                        <div title="Baixar relatório de voo">
+                          <Button isIconOnly size="sm" variant="ghost" className="border-none text-slate-400 hover:text-blue-500 rounded-lg min-w-0 w-8 h-8">
                             <SvgIcon name="download-01" className="w-4 h-4" />
                           </Button>
-                        </Tooltip>
+                        </div>
                       </div>
                     </div>
                   </Card>
@@ -791,7 +913,7 @@ export default function Home() {
                         <h3 className="text-sm font-bold text-slate-800">{weather.hub}</h3>
                         <p className="text-[10px] text-slate-400 font-medium mt-0.5">METAR Ativo</p>
                       </div>
-                      <Chip color={weather.impactColor as "success" | "warning"} variant="flat" size="sm" className="font-bold text-[9px] h-5 min-w-0">
+                      <Chip color={weather.impactColor as "success" | "warning"} variant="soft" size="sm" className="font-bold text-[9px] h-5 min-w-0">
                         {weather.impact}
                       </Chip>
                     </div>
@@ -904,24 +1026,33 @@ export default function Home() {
                 </div>
 
                 <Button
-                  onClick={handleCalculateRoute}
-                  isLoading={isRoutingLoading}
+                  isPending={isRoutingLoading}
+                  onPress={handleCalculateRoute}
                   className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold h-11 rounded-xl transition-all shadow-md shadow-blue-500/10 flex items-center justify-center gap-2 mt-2"
                 >
-                  <SvgIcon name="route" className="w-4 h-4 text-white" />
-                  <span>Otimizar Rota por IA</span>
+                  {({ isPending }) => (
+                    <>
+                      {isPending ? <Spinner color="current" size="sm" /> : <SvgIcon name="route" className="w-4 h-4 text-white" />}
+                      <span>{isPending ? "Otimizando..." : "Otimizar Rota por IA"}</span>
+                    </>
+                  )}
                 </Button>
               </Card>
 
               {/* ROUTE CALCULATION DISPLAY RESULT */}
-              {routeResult && (
+              {isRoutingLoading ? (
+                <Card className="bg-white/60 border border-white/80 rounded-2xl p-8 flex flex-col items-center justify-center gap-4 shadow-sm animate-fade-in">
+                  <Spinner size="lg" color="accent" />
+                  <span className="text-sm font-semibold text-slate-500 animate-pulse">A Inteligência Artificial está calculando a rota ideal...</span>
+                </Card>
+              ) : routeResult && (
                 <Card className="bg-white border border-slate-200/40 rounded-2xl p-5 flex flex-col gap-5 shadow-[0_4px_24px_-4px_rgba(79,119,186,0.04)] animate-fade-in">
                   <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
                     <div>
                       <h3 className="text-sm font-bold text-slate-800">Resultado do Plano de Voo Inteligente</h3>
                       <p className="text-[10px] text-slate-400 mt-0.5">Operado por {routeResult.aircraftName}</p>
                     </div>
-                    <Chip color="success" size="sm" variant="flat" className="font-bold text-[9px] uppercase">
+                    <Chip color="success" size="sm" variant="soft" className="font-bold text-[9px] uppercase">
                       Rota Gerada
                     </Chip>
                   </div>
@@ -984,12 +1115,14 @@ export default function Home() {
               </h3>
               <Chip
                 color="success"
-                variant="flat"
+                variant="soft"
                 size="sm"
-                startContent={<span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping mr-1" />}
                 className="font-bold text-[9px] border border-emerald-100/50 h-5"
               >
-                ATIVO
+                <div className="flex items-center">
+                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping mr-1" />
+                  ATIVO
+                </div>
               </Chip>
             </div>
 
