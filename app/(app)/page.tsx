@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Button,
   ButtonGroup,
@@ -55,6 +55,11 @@ export default function Home() {
   const [sortBy, setSortBy] = useState<Key>("Recomendados");
   const [isSearching, setIsSearching] = useState(false);
   const [isSearchingLoading, setIsSearchingLoading] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const [routeOrigin, setRouteOrigin] = useState<Key | null>("GRU");
   const [routeDest, setRouteDest] = useState<Key | null>("MIA");
@@ -310,51 +315,15 @@ export default function Home() {
             </Autocomplete>
           </div>
 
-          <DatePicker
-            value={departDate}
-            onChange={setDepartDate}
-            granularity="minute"
-            className={`${tripType === "one-way" ? "md:col-span-4" : "md:col-span-2"} flex flex-col min-w-0`}
-            aria-label="Data de ida"
-          >
-            <Label className="text-[9px] uppercase tracking-wider text-slate-400 font-semibold mb-1 pl-3">Ida</Label>
-            <DateField.Group className="bg-white border border-slate-200/40 rounded-2xl px-2 py-1 flex items-center justify-between w-full h-[52px] hover:border-slate-200/80 transition-all">
-              <DateField.Input>{(segment) => <DateField.Segment segment={segment} />}</DateField.Input>
-              <DateField.Suffix>
-                <DatePicker.Trigger>
-                  <DatePicker.TriggerIndicator />
-                </DatePicker.Trigger>
-              </DateField.Suffix>
-            </DateField.Group>
-            <DatePicker.Popover className="border border-slate-200 shadow-lg rounded-2xl bg-white/95 backdrop-blur-xl">
-              <Calendar aria-label="Data de ida">
-                <Calendar.Header>
-                  <Calendar.YearPickerTrigger>
-                    <Calendar.YearPickerTriggerHeading />
-                    <Calendar.YearPickerTriggerIndicator />
-                  </Calendar.YearPickerTrigger>
-                  <Calendar.NavButton slot="previous" />
-                  <Calendar.NavButton slot="next" />
-                </Calendar.Header>
-                <Calendar.Grid>
-                  <Calendar.GridHeader>
-                    {(day) => <Calendar.HeaderCell className="text-slate-400 font-bold text-xs">{day}</Calendar.HeaderCell>}
-                  </Calendar.GridHeader>
-                  <Calendar.GridBody>{(date) => <Calendar.Cell date={date} />}</Calendar.GridBody>
-                </Calendar.Grid>
-              </Calendar>
-            </DatePicker.Popover>
-          </DatePicker>
-
-          {tripType === "round" && (
+          {isMounted ? (
             <DatePicker
-              value={returnDate}
-              onChange={setReturnDate}
+              value={departDate}
+              onChange={setDepartDate}
               granularity="minute"
-              className="md:col-span-2 flex flex-col min-w-0 animate-fade-in"
-              aria-label="Data de volta"
+              className={`${tripType === "one-way" ? "md:col-span-4" : "md:col-span-2"} flex flex-col min-w-0`}
+              aria-label="Data de ida"
             >
-              <Label className="text-[9px] uppercase tracking-wider text-slate-400 font-semibold mb-1 pl-3">Volta</Label>
+              <Label className="text-[9px] uppercase tracking-wider text-slate-400 font-semibold mb-1 pl-3">Ida</Label>
               <DateField.Group className="bg-white border border-slate-200/40 rounded-2xl px-2 py-1 flex items-center justify-between w-full h-[52px] hover:border-slate-200/80 transition-all">
                 <DateField.Input>{(segment) => <DateField.Segment segment={segment} />}</DateField.Input>
                 <DateField.Suffix>
@@ -364,7 +333,7 @@ export default function Home() {
                 </DateField.Suffix>
               </DateField.Group>
               <DatePicker.Popover className="border border-slate-200 shadow-lg rounded-2xl bg-white/95 backdrop-blur-xl">
-                <Calendar aria-label="Data de volta">
+                <Calendar aria-label="Data de ida">
                   <Calendar.Header>
                     <Calendar.YearPickerTrigger>
                       <Calendar.YearPickerTriggerHeading />
@@ -382,6 +351,56 @@ export default function Home() {
                 </Calendar>
               </DatePicker.Popover>
             </DatePicker>
+          ) : (
+            <div className={`${tripType === "one-way" ? "md:col-span-4" : "md:col-span-2"} flex flex-col min-w-0`}>
+              <Label className="text-[9px] uppercase tracking-wider text-slate-400 font-semibold mb-1 pl-3">Ida</Label>
+              <div className="bg-white border border-slate-200/40 rounded-2xl w-full h-[52px]" />
+            </div>
+          )}
+
+          {tripType === "round" && (
+            isMounted ? (
+              <DatePicker
+                value={returnDate}
+                onChange={setReturnDate}
+                granularity="minute"
+                className="md:col-span-2 flex flex-col min-w-0 animate-fade-in"
+                aria-label="Data de volta"
+              >
+                <Label className="text-[9px] uppercase tracking-wider text-slate-400 font-semibold mb-1 pl-3">Volta</Label>
+                <DateField.Group className="bg-white border border-slate-200/40 rounded-2xl px-2 py-1 flex items-center justify-between w-full h-[52px] hover:border-slate-200/80 transition-all">
+                  <DateField.Input>{(segment) => <DateField.Segment segment={segment} />}</DateField.Input>
+                  <DateField.Suffix>
+                    <DatePicker.Trigger>
+                      <DatePicker.TriggerIndicator />
+                    </DatePicker.Trigger>
+                  </DateField.Suffix>
+                </DateField.Group>
+                <DatePicker.Popover className="border border-slate-200 shadow-lg rounded-2xl bg-white/95 backdrop-blur-xl">
+                  <Calendar aria-label="Data de volta">
+                    <Calendar.Header>
+                      <Calendar.YearPickerTrigger>
+                        <Calendar.YearPickerTriggerHeading />
+                        <Calendar.YearPickerTriggerIndicator />
+                      </Calendar.YearPickerTrigger>
+                      <Calendar.NavButton slot="previous" />
+                      <Calendar.NavButton slot="next" />
+                    </Calendar.Header>
+                    <Calendar.Grid>
+                      <Calendar.GridHeader>
+                        {(day) => <Calendar.HeaderCell className="text-slate-400 font-bold text-xs">{day}</Calendar.HeaderCell>}
+                      </Calendar.GridHeader>
+                      <Calendar.GridBody>{(date) => <Calendar.Cell date={date} />}</Calendar.GridBody>
+                    </Calendar.Grid>
+                  </Calendar>
+                </DatePicker.Popover>
+              </DatePicker>
+            ) : (
+              <div className="md:col-span-2 flex flex-col min-w-0">
+                <Label className="text-[9px] uppercase tracking-wider text-slate-400 font-semibold mb-1 pl-3">Volta</Label>
+                <div className="bg-white border border-slate-200/40 rounded-2xl w-full h-[52px]" />
+              </div>
+            )
           )}
 
           <div className="md:col-span-1 flex md:justify-end mt-4 md:mt-0" title="Cadastrar nova viagem">
