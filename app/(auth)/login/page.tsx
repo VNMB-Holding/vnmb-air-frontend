@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useState, Suspense, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -16,6 +16,14 @@ function LoginForm() {
   const [rememberMe, setRememberMe] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const remembered = localStorage.getItem("remembered_email");
+    if (remembered) {
+      setEmail(remembered);
+      setRememberMe(true);
+    }
+  }, []);
 
   const toggleVisibility = () => setIsVisible(!isVisible);
 
@@ -93,9 +101,11 @@ function LoginForm() {
                   document.cookie = `user_name=${encodeURIComponent(data.user.name)}; path=/; max-age=${maxAge}; SameSite=Lax; Secure`;
                   document.cookie = `user_email=${encodeURIComponent(data.user.email)}; path=/; max-age=${maxAge}; SameSite=Lax; Secure`;
 
-                  toast.success("Login realizado com sucesso!", {
-                    description: `Bem-vindo de volta, ${data.user.name}!`,
-                  });
+                  if (rememberMe) {
+                    localStorage.setItem("remembered_email", email);
+                  } else {
+                    localStorage.removeItem("remembered_email");
+                  }
 
                   router.push(callbackUrl);
                 } catch (error: any) {
@@ -205,13 +215,6 @@ function LoginForm() {
                     Lembrar de mim
                   </span>
                 </button>
-
-                <Link
-                  href="/forgot-password"
-                  className="text-[11px] text-white/50 hover:text-white/80 transition-colors font-light leading-none"
-                >
-                  Esqueci minha senha?
-                </Link>
               </div>
 
               <Button
