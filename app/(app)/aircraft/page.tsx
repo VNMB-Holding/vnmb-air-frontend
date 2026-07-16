@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Card, Chip, Button } from "@heroui/react";
+import { Card, Chip, Button, Spinner, toast } from "@heroui/react";
 import { SvgIcon } from "@/components/SvgIcon";
 
 export default function AircraftPage() {
@@ -58,10 +58,20 @@ export default function AircraftPage() {
 
   const [selectedId, setSelectedId] = useState<string>("g650");
   const selectedAircraft = fleet.find((ac) => ac.id === selectedId) || fleet[0];
+  const [isScheduling, setIsScheduling] = useState(false);
+
+  const handleSchedule = () => {
+    setIsScheduling(true);
+    setTimeout(() => {
+      setIsScheduling(false);
+      toast.success("Escala programada!", {
+        description: `Nova escala de voo definida com sucesso para a aeronave ${selectedAircraft.model}.`
+      });
+    }, 1200);
+  };
 
   return (
     <div className="w-full flex flex-col gap-6 pb-12 text-slate-800 animate-fade-in">
-      {/* Page Header */}
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2 border-b border-slate-200/40">
         <div>
           <h1 className="text-xl md:text-2xl font-bold tracking-tight text-slate-800">Gerenciamento de Frota</h1>
@@ -71,9 +81,7 @@ export default function AircraftPage() {
         </div>
       </header>
 
-      {/* Main Grid: Master-Detail Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Fleet List (Master) */}
         <div className="lg:col-span-5 flex flex-col gap-4">
           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">
             Lista de Aeronaves Ativas
@@ -86,13 +94,11 @@ export default function AircraftPage() {
                 <Card
                   key={aircraft.id}
                   onClick={() => setSelectedId(aircraft.id)}
-                  className={`cursor-pointer transition-all duration-300 p-5 backdrop-blur-xl rounded-3xl border flex flex-col gap-4 ${
-                    isSelected
+                  className={`cursor-pointer transition-all duration-300 p-5 backdrop-blur-xl rounded-3xl border flex flex-col gap-4 ${isSelected
                       ? "bg-white border-blue-600 shadow-[0_12px_36px_-8px_rgba(0,49,132,0.06)]"
                       : "bg-white/60 border-white/80 hover:bg-white/90 hover:border-slate-200/80 shadow-[0_4px_24px_-4px_rgba(79,119,186,0.04)]"
-                  }`}
+                    }`}
                 >
-                  {/* Header: Registration, Name, and Status Chip */}
                   <div className="flex flex-wrap items-center justify-between gap-3 pb-2.5 border-b border-slate-100/50">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-mono font-bold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-100/40">
@@ -112,7 +118,6 @@ export default function AircraftPage() {
                     </Chip>
                   </div>
 
-                  {/* Body: Model details & specs */}
                   <div className="flex justify-between items-end">
                     <div>
                       <h4 className="text-sm font-extrabold text-slate-800 leading-snug">{aircraft.model}</h4>
@@ -124,7 +129,6 @@ export default function AircraftPage() {
                     </div>
                   </div>
 
-                  {/* Specs footer row with icons */}
                   <div className="flex items-center justify-between pt-2.5 border-t border-slate-100/50 bg-slate-50/20 px-3 py-2 rounded-2xl">
                     <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
                       <SvgIcon name="user-01" className="w-3.5 h-3.5 text-slate-400" />
@@ -141,14 +145,12 @@ export default function AircraftPage() {
           </div>
         </div>
 
-        {/* Right Column: Fleet Details & Interactive 3D Placeholder HUD (Detail) */}
         <div className="lg:col-span-7 flex flex-col gap-4">
           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">
             Painel Técnico & Telemetria do Jato
           </h3>
 
           <Card className="bg-white/60 border border-white/80 backdrop-blur-xl rounded-3xl p-6 shadow-[0_12px_40px_-8px_rgba(79,119,186,0.06)] flex flex-col gap-6">
-            {/* Detail Header */}
             <div className="flex flex-wrap items-center justify-between gap-4 pb-3.5 border-b border-slate-100/60">
               <div>
                 <h2 className="text-xl font-extrabold text-slate-800">{selectedAircraft.model}</h2>
@@ -166,7 +168,6 @@ export default function AircraftPage() {
               </div>
             </div>
 
-            {/* RESERVED SPACE FOR 3D MODEL VIEW / HUD SCREEN */}
             <div className="w-full h-[260px] bg-slate-950 rounded-2xl relative overflow-hidden flex flex-col items-center justify-center border border-slate-900 shadow-inner group">
               {selectedAircraft.id === "g650" ? (
                 <iframe
@@ -186,7 +187,6 @@ export default function AircraftPage() {
                 />
               ) : (
                 <>
-                  {/* Tactical Tech HUD Background Grid */}
                   <div
                     className="absolute inset-0 z-0 opacity-15"
                     style={{
@@ -196,22 +196,18 @@ export default function AircraftPage() {
                     }}
                   />
 
-                  {/* Glowing Corner Elements (Futuristic interface frame) */}
                   <div className="absolute top-3 left-3 w-3.5 h-3.5 border-t-2 border-l-2 border-blue-500/60" />
                   <div className="absolute top-3 right-3 w-3.5 h-3.5 border-t-2 border-r-2 border-blue-500/60" />
                   <div className="absolute bottom-3 left-3 w-3.5 h-3.5 border-b-2 border-l-2 border-blue-500/60" />
                   <div className="absolute bottom-3 right-3 w-3.5 h-3.5 border-b-2 border-r-2 border-blue-500/60" />
 
-                  {/* HUD Calibration Crosshairs */}
                   <div className="absolute top-1/2 left-4 right-4 h-[1px] bg-sky-500/10 -translate-y-1/2" />
                   <div className="absolute left-1/2 top-4 bottom-4 w-[1px] bg-sky-500/10 -translate-x-1/2" />
 
-                  {/* Tactical compass / target overlay */}
                   <div className="absolute w-36 h-36 border border-sky-500/20 rounded-full animate-[spin_20s_linear_infinite] flex items-center justify-center">
                     <div className="w-32 h-32 border border-dashed border-sky-500/10 rounded-full" />
                   </div>
 
-                  {/* HUD Information Overlay */}
                   <div className="absolute top-3 left-6 text-[8px] font-mono text-sky-500/60 flex flex-col gap-0.5 uppercase tracking-widest z-10">
                     <span>Viewport: Interactive 3D HUD</span>
                     <span>Active Link: {selectedAircraft.id}_mesh</span>
@@ -222,7 +218,6 @@ export default function AircraftPage() {
                     <span>Tgt: {selectedAircraft.registration}</span>
                   </div>
 
-                  {/* Core interactive placeholder status block */}
                   <div className="z-10 flex flex-col items-center gap-3 px-6 text-center">
                     <div className="w-12 h-12 rounded-full bg-blue-950/80 border border-blue-500/30 flex items-center justify-center text-blue-400 group-hover:scale-105 transition-transform duration-300">
                       <SvgIcon name="plane" className="w-6 h-6 rotate-45" />
@@ -243,7 +238,6 @@ export default function AircraftPage() {
               )}
             </div>
 
-            {/* Tech spec details list */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 border-t border-slate-100/60 pt-5 bg-slate-50/20 p-4 rounded-2xl">
               <div>
                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Capacidade</span>
@@ -294,7 +288,6 @@ export default function AircraftPage() {
               </div>
             </div>
 
-            {/* Operational metadata & footer buttons */}
             <div className="flex flex-wrap items-center justify-between gap-4 pt-3.5 border-t border-slate-100/60 bg-white/40">
               <div className="flex flex-col">
                 <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Inspeção Mandatória ANAC</span>
@@ -307,10 +300,17 @@ export default function AircraftPage() {
                   <span className="text-xs font-bold text-blue-900">{selectedAircraft.costPerHour}/h</span>
                 </div>
                 <Button
+                  isPending={isScheduling}
+                  onPress={handleSchedule}
                   size="sm"
-                  className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 h-9 rounded-xl transition-all shadow-xs"
+                  className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 h-9 rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5"
                 >
-                  Programar Escala
+                  {({ isPending }) => (
+                    <>
+                      {isPending ? <Spinner color="current" size="sm" /> : null}
+                      Programar Escala
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

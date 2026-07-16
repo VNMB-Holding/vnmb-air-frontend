@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Card, Avatar, Chip, Button, Tooltip } from "@heroui/react";
+import { Card, Avatar, Chip, Button, Tooltip, Spinner, toast } from "@heroui/react";
 import { SvgIcon } from "@/components/SvgIcon";
 
 export default function PilotsPage() {
@@ -65,10 +65,20 @@ export default function PilotsPage() {
 
   const [selectedId, setSelectedId] = useState<string>("carlos");
   const selectedPilot = crew.find((p) => p.id === selectedId) || crew[0];
+  const [isEditingScale, setIsEditingScale] = useState(false);
+
+  const handleEditScale = () => {
+    setIsEditingScale(true);
+    setTimeout(() => {
+      setIsEditingScale(false);
+      toast.success("Escala atualizada!", {
+        description: `A escala do tripulante ${selectedPilot.name} foi salva com sucesso.`,
+      });
+    }, 1200);
+  };
 
   return (
     <div className="w-full flex flex-col gap-6 pb-12 text-slate-800 animate-fade-in">
-      {/* Page Header */}
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2 border-b border-slate-200/40">
         <div>
           <h1 className="text-xl md:text-2xl font-bold tracking-tight text-slate-800">Equipe de Tripulantes</h1>
@@ -78,9 +88,7 @@ export default function PilotsPage() {
         </div>
       </header>
 
-      {/* Main Grid: Master-Detail Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Pilots List (Master) */}
         <div className="lg:col-span-5 flex flex-col gap-4">
           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">
             Lista de Pilotos Operacionais
@@ -93,13 +101,11 @@ export default function PilotsPage() {
                 <Card
                   key={pilot.id}
                   onClick={() => setSelectedId(pilot.id)}
-                  className={`cursor-pointer transition-all duration-300 p-5 backdrop-blur-xl rounded-3xl border flex flex-col gap-4 ${
-                    isSelected
+                  className={`cursor-pointer transition-all duration-300 p-5 backdrop-blur-xl rounded-3xl border flex flex-col gap-4 ${isSelected
                       ? "bg-white border-blue-600 shadow-[0_12px_36px_-8px_rgba(0,49,132,0.06)]"
                       : "bg-white/60 border-white/80 hover:bg-white/90 hover:border-slate-200/80 shadow-[0_4px_24px_-4px_rgba(79,119,186,0.04)]"
-                  }`}
+                    }`}
                 >
-                  {/* Header: Avatar, Name & Status Chip */}
                   <div className="flex flex-wrap items-center justify-between gap-3 pb-2.5 border-b border-slate-100/50">
                     <div className="flex items-center gap-3">
                       <Avatar className="w-9 h-9 text-xs font-bold border border-slate-200/60 shadow-xs bg-gradient-to-br from-blue-50 to-blue-100 text-blue-700">
@@ -111,8 +117,8 @@ export default function PilotsPage() {
                       </div>
                     </div>
                     <Chip
-                      color={pilot.statusColor as "success" | "primary" | "default"}
-                      variant="flat"
+                      color={pilot.statusColor === "primary" ? "accent" : (pilot.statusColor as "success" | "default")}
+                      variant="soft"
                       size="sm"
                       className="font-bold text-[9px] uppercase h-5 min-w-0"
                     >
@@ -120,7 +126,6 @@ export default function PilotsPage() {
                     </Chip>
                   </div>
 
-                  {/* Body: Aircraft authorization info */}
                   <div className="flex justify-between items-end">
                     <div>
                       <span className="text-[9px] text-slate-400 font-bold uppercase">Habilitação</span>
@@ -140,14 +145,12 @@ export default function PilotsPage() {
           </div>
         </div>
 
-        {/* Right Column: Pilot Details Dashboard (Detail) */}
         <div className="lg:col-span-7 flex flex-col gap-4">
           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">
             Ficha Cadastral e Escala do Piloto
           </h3>
 
           <Card className="bg-white/60 border border-white/80 backdrop-blur-xl rounded-3xl p-6 shadow-[0_12px_40px_-8px_rgba(79,119,186,0.06)] flex flex-col gap-6">
-            {/* Profile Header Details */}
             <div className="flex flex-wrap items-center justify-between gap-4 pb-4.5 border-b border-slate-100/60">
               <div className="flex items-center gap-4">
                 <Avatar className="w-14 h-14 text-lg font-bold border border-slate-200/60 shadow-xs bg-gradient-to-br from-blue-50 to-blue-100 text-blue-700">
@@ -164,8 +167,8 @@ export default function PilotsPage() {
               </div>
 
               <Chip
-                color={selectedPilot.statusColor as "success" | "primary" | "default"}
-                variant="flat"
+                color={selectedPilot.statusColor === "primary" ? "accent" : (selectedPilot.statusColor as "success" | "default")}
+                variant="soft"
                 size="sm"
                 className="font-bold text-[10px] uppercase h-5.5 min-w-0 px-3"
               >
@@ -173,7 +176,6 @@ export default function PilotsPage() {
               </Chip>
             </div>
 
-            {/* Stats Dashboard Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 border-t border-b border-slate-100/50 py-4 bg-slate-50/20 px-4 rounded-2xl">
               <div>
                 <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Total Acumulado</span>
@@ -193,7 +195,6 @@ export default function PilotsPage() {
               </div>
             </div>
 
-            {/* Upcoming scale schedule list */}
             <div className="flex flex-col gap-3.5">
               <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Escala Futura Próximos Voos</span>
               <div className="flex flex-col gap-3">
@@ -212,8 +213,8 @@ export default function PilotsPage() {
                       </div>
                     </div>
                     <Chip
-                      color={flight.status === "Em Rota" ? "primary" : "success"}
-                      variant="flat"
+                      color={flight.status === "Em Rota" ? "accent" : "success"}
+                      variant="soft"
                       size="sm"
                       className="font-bold text-[8.5px] uppercase h-5 min-w-0"
                     >
@@ -224,7 +225,6 @@ export default function PilotsPage() {
               </div>
             </div>
 
-            {/* Action buttons */}
             <div className="flex items-center justify-between pt-3 border-t border-slate-100/60 bg-white/40">
               <span className="text-[9.5px] text-slate-400 font-light flex items-center gap-1">
                 <SvgIcon name="info-circle" className="w-4 h-4 text-slate-400" />
@@ -233,18 +233,24 @@ export default function PilotsPage() {
 
               <div className="flex items-center gap-2">
                 <Button
-                  variant="light"
+                  variant="ghost"
                   size="sm"
                   className="text-xs font-bold text-slate-500 hover:text-slate-800 rounded-xl"
                 >
                   Histórico de Escalas
                 </Button>
                 <Button
-                  color="primary"
+                  isPending={isEditingScale}
+                  onPress={handleEditScale}
                   size="sm"
-                  className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 h-9 rounded-xl transition-all shadow-xs"
+                  className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 h-9 rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5"
                 >
-                  Editar Escala
+                  {({ isPending }) => (
+                    <>
+                      {isPending ? <Spinner color="current" size="sm" /> : null}
+                      Editar Escala
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
