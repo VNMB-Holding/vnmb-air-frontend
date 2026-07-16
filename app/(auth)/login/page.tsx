@@ -3,13 +3,14 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { TextField, Label, FieldError, toast } from "@heroui/react";
+import { TextField, Label, FieldError, toast, Button, Spinner } from "@heroui/react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const toggleVisibility = () => setIsVisible(!isVisible);
 
@@ -73,9 +74,13 @@ export default function LoginPage() {
                   });
                   return;
                 }
-                toast.success("Login realizado com sucesso!", {
-                  description: `Bem-vindo de volta! E-mail: ${email}`,
-                });
+                setIsLoading(true);
+                setTimeout(() => {
+                  setIsLoading(false);
+                  toast.success("Login realizado com sucesso!", {
+                    description: `Bem-vindo de volta! E-mail: ${email}`,
+                  });
+                }, 2000);
               }}
               className="p-8 sm:p-10 flex flex-col gap-6"
             >
@@ -181,12 +186,18 @@ export default function LoginPage() {
               </div>
 
               {/* Submit Button */}
-              <button
+              <Button
                 type="submit"
+                isPending={isLoading}
                 className="w-full h-11 mt-2 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-medium tracking-wide text-sm transition-all duration-200 shadow-lg shadow-blue-600/25 hover:shadow-blue-500/35 flex items-center justify-center gap-2 group"
               >
-                Entrar
-              </button>
+                {({ isPending }) => (
+                  <>
+                    {isPending ? <Spinner color="current" size="sm" /> : null}
+                    Entrar
+                  </>
+                )}
+              </Button>
             </form>
 
             {/* Bottom info section */}
