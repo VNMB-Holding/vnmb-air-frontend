@@ -56,7 +56,6 @@ export default function Home() {
   const [isSearching, setIsSearching] = useState(false);
   const [isSearchingLoading, setIsSearchingLoading] = useState(false);
 
-  // States for AI Routing simulation
   const [routeOrigin, setRouteOrigin] = useState<Key | null>("GRU");
   const [routeDest, setRouteDest] = useState<Key | null>("MIA");
   const [routeAircraft, setRouteAircraft] = useState<Key | null>("phenom300");
@@ -75,6 +74,7 @@ export default function Home() {
   const [cadastroPiloto, setCadastroPiloto] = useState<Key>("carlos");
   const [cadastroAeronave, setCadastroAeronave] = useState<Key>("g650");
   const [cadastroObs, setCadastroObs] = useState("");
+  const [isCadastroLoading, setIsCadastroLoading] = useState(false);
 
   const handleSelectFlight = (flightCode: string, route: string, price: string) => {
     toast.success("Voo selecionado!", {
@@ -83,15 +83,18 @@ export default function Home() {
   };
 
   const handleCadastrarViagem = () => {
-    const orig = airports.find(a => a.id === originKey)?.name || "";
-    const dest = airports.find(a => a.id === destinationKey)?.name || "";
-    toast.success("Viagem cadastrada com sucesso!", {
-      description: `Voo de ${orig} para ${dest} registrado no sistema.`,
-    });
-    setIsOpenModalCadastro(false);
+    setIsCadastroLoading(true);
+    setTimeout(() => {
+      const orig = airports.find(a => a.id === originKey)?.name || "";
+      const dest = airports.find(a => a.id === destinationKey)?.name || "";
+      toast.success("Viagem cadastrada com sucesso!", {
+        description: `Voo de ${orig} para ${dest} registrado no sistema.`,
+      });
+      setIsCadastroLoading(false);
+      setIsOpenModalCadastro(false);
+    }, 1200);
   };
 
-  // AI Routing Logic
   const handleCalculateRoute = () => {
     if (!routeOrigin || !routeDest || !routeAircraft) {
       toast("Por favor, preencha todos os campos para o roteamento.");
@@ -108,7 +111,6 @@ export default function Home() {
 
       if (!origItem || !destItem || !acItem) return;
 
-      // Distance mock (GRU -> MIA is approx 6500km)
       let baseDistance = 6500;
       if (
         (routeOrigin === "GRU" && routeDest === "GIG") ||
@@ -122,12 +124,10 @@ export default function Home() {
         baseDistance = 880;
       }
 
-      // Check if distance exceeds aircraft range
       const needsRefuel = baseDistance > acItem.range;
       const legs = [];
 
       if (needsRefuel) {
-        // Recommend MCO or LIS as intermediate stop depending on routes
         const stop = "MCO";
         legs.push({ from: origItem.code, to: stop, dist: Math.round(baseDistance * 0.8), time: "6h 15m", status: "Recomendado para Reabastecimento" });
         legs.push({ from: stop, to: destItem.code, dist: Math.round(baseDistance * 0.2), time: "1h 45m", status: "Leg Final" });
@@ -137,8 +137,8 @@ export default function Home() {
         legs.push({ from: origItem.code, to: destItem.code, dist: baseDistance, time: `${estTimeHours}h ${estTimeMin}m`, status: "Voo Direto" });
       }
 
-      const totalTime = legs.reduce((acc, leg) => acc + (leg.from ? 7 : 0), 0); // Simulated total hours
-      const fuelConsumption = Math.round(baseDistance * 4.2); // Simulated fuel
+      const totalTime = legs.reduce((acc, leg) => acc + (leg.from ? 7 : 0), 0); 
+      const fuelConsumption = Math.round(baseDistance * 4.2); 
 
       setRouteResult({
         aircraftName: acItem.name,
@@ -158,9 +158,7 @@ export default function Home() {
 
   return (
     <div className="w-full flex flex-col gap-6 pb-8 text-slate-800 animate-fade-in">
-      {/* Premium Glass Banner with custom background */}
       <div className="rounded-[24px] px-8 pt-8 md:pt-12 pb-12 md:pb-24 relative overflow-hidden flex flex-col justify-start min-h-[220px] md:min-h-[280px] shrink-0 shadow-sm">
-        {/* Background Image */}
         <img
           src="/images/banner-bg.png"
           alt="Banner Background"
@@ -180,9 +178,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Flight Search Widget Card */}
       <Card className="backdrop-blur-xl bg-white/60 rounded-3xl p-5 md:p-6 shadow-[0_12px_40px_-8px_rgba(79,119,186,0.06)] border border-white/80 -mt-16 md:-mt-24 mx-2 md:mx-6 z-10 relative flex flex-col gap-4">
-        {/* Quick Selectors Bar */}
         <div className="flex flex-wrap items-center justify-between gap-4 pb-2 border-b border-slate-100/40">
           <div className="flex gap-2 p-0.5 bg-slate-100/60 rounded-full border border-slate-200/30">
             <button
@@ -212,9 +208,7 @@ export default function Home() {
           )}
         </div>
 
-        {/* Input Fields Row */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-          {/* Origin Autocomplete */}
           <div className="md:col-span-3 flex flex-col min-w-0">
             <Autocomplete
               placeholder="Selecione origem"
@@ -259,7 +253,6 @@ export default function Home() {
             </Autocomplete>
           </div>
 
-          {/* Swap Button */}
           <div className="md:col-span-1 justify-self-center z-10 shrink-0 flex items-center justify-center h-[52px] mt-3 md:mt-0" title="Inverter aeroportos">
             <Button
               isIconOnly
@@ -273,7 +266,6 @@ export default function Home() {
             </Button>
           </div>
 
-          {/* Destination Autocomplete */}
           <div className="md:col-span-3 flex flex-col min-w-0">
             <Autocomplete
               placeholder="Selecione destino"
@@ -318,7 +310,6 @@ export default function Home() {
             </Autocomplete>
           </div>
 
-          {/* Departure Date */}
           <DatePicker
             value={departDate}
             onChange={setDepartDate}
@@ -329,6 +320,11 @@ export default function Home() {
             <Label className="text-[9px] uppercase tracking-wider text-slate-400 font-semibold mb-1 pl-3">Ida</Label>
             <DateField.Group className="bg-white border border-slate-200/40 rounded-2xl px-2 py-1 flex items-center justify-between w-full h-[52px] hover:border-slate-200/80 transition-all">
               <DateField.Input>{(segment) => <DateField.Segment segment={segment} />}</DateField.Input>
+              <DateField.Suffix>
+                <DatePicker.Trigger>
+                  <DatePicker.TriggerIndicator />
+                </DatePicker.Trigger>
+              </DateField.Suffix>
             </DateField.Group>
             <DatePicker.Popover className="border border-slate-200 shadow-lg rounded-2xl bg-white/95 backdrop-blur-xl">
               <Calendar aria-label="Data de ida">
@@ -350,7 +346,6 @@ export default function Home() {
             </DatePicker.Popover>
           </DatePicker>
 
-          {/* Return Date */}
           {tripType === "round" && (
             <DatePicker
               value={returnDate}
@@ -362,6 +357,11 @@ export default function Home() {
               <Label className="text-[9px] uppercase tracking-wider text-slate-400 font-semibold mb-1 pl-3">Volta</Label>
               <DateField.Group className="bg-white border border-slate-200/40 rounded-2xl px-2 py-1 flex items-center justify-between w-full h-[52px] hover:border-slate-200/80 transition-all">
                 <DateField.Input>{(segment) => <DateField.Segment segment={segment} />}</DateField.Input>
+                <DateField.Suffix>
+                  <DatePicker.Trigger>
+                    <DatePicker.TriggerIndicator />
+                  </DatePicker.Trigger>
+                </DateField.Suffix>
               </DateField.Group>
               <DatePicker.Popover className="border border-slate-200 shadow-lg rounded-2xl bg-white/95 backdrop-blur-xl">
                 <Calendar aria-label="Data de volta">
@@ -384,7 +384,6 @@ export default function Home() {
             </DatePicker>
           )}
 
-          {/* Register Button */}
           <div className="md:col-span-1 flex md:justify-end mt-4 md:mt-0" title="Cadastrar nova viagem">
             <Button
               onPress={() => setIsOpenModalCadastro(true)}
@@ -396,7 +395,6 @@ export default function Home() {
         </div>
       </Card>
 
-      {/* Flight Registration Modal */}
       <Modal>
         <Modal.Backdrop isOpen={isOpenModalCadastro} onOpenChange={setIsOpenModalCadastro} className="bg-slate-900/40 backdrop-blur-md">
           <Modal.Container placement="center">
@@ -446,7 +444,6 @@ export default function Home() {
 
                 <Separator className="my-1 bg-slate-100/80" />
 
-                {/* Pilot Selector */}
                 <div className="w-full flex flex-col">
                   <Label className="text-[9px] uppercase tracking-wider text-slate-400 font-bold mb-1.5 pl-1">Piloto em Comando</Label>
                   <Select
@@ -469,7 +466,6 @@ export default function Home() {
                   </Select>
                 </div>
 
-                {/* Aircraft Selector */}
                 <div className="w-full flex flex-col">
                   <Label className="text-[9px] uppercase tracking-wider text-slate-400 font-bold mb-1.5 pl-1">Aeronave Alocada</Label>
                   <Select
@@ -492,7 +488,6 @@ export default function Home() {
                   </Select>
                 </div>
 
-                {/* Observations */}
                 <div className="w-full flex flex-col">
                   <Label className="text-[9px] uppercase tracking-wider text-slate-400 font-bold mb-1.5 pl-1">Observações da Operação</Label>
                   <TextField className="w-full" name="observations" variant="secondary" value={cadastroObs} onChange={setCadastroObs}>
@@ -504,8 +499,17 @@ export default function Home() {
                 <Button slot="close" variant="secondary" className="rounded-full px-6 py-2.5 h-10 text-xs font-bold border border-slate-200/60 hover:bg-slate-50 text-slate-600 cursor-pointer active:scale-95 transition-all">
                   Cancelar
                 </Button>
-                <Button onPress={handleCadastrarViagem} className="bg-blue-600 hover:bg-blue-500 text-white rounded-full px-6 py-2.5 h-10 text-xs font-bold cursor-pointer active:scale-95 shadow-md shadow-blue-500/10 transition-all">
-                  Confirmar Cadastro
+                <Button 
+                  isPending={isCadastroLoading}
+                  onPress={handleCadastrarViagem} 
+                  className="bg-blue-600 hover:bg-blue-500 text-white rounded-full px-6 py-2.5 h-10 text-xs font-bold cursor-pointer active:scale-95 shadow-md shadow-blue-500/10 transition-all"
+                >
+                  {({ isPending }) => (
+                    <>
+                      {isPending ? <Spinner color="current" size="sm" /> : null}
+                      Confirmar Cadastro
+                    </>
+                  )}
                 </Button>
               </Modal.Footer>
             </Modal.Dialog>
@@ -513,7 +517,6 @@ export default function Home() {
         </Modal.Backdrop>
       </Modal>
 
-      {/* Dynamic Sub-Navigation Tabs governed by the custom ButtonGroup */}
       <div className="flex items-center overflow-x-auto pb-2 mt-2 custom-scrollbar -mx-2 px-2 shrink-0">
         <ButtonGroup variant="secondary" className="bg-white/90 border border-slate-200/50 p-1.5 rounded-full flex gap-1.5 shadow-sm">
           <Button
@@ -549,11 +552,8 @@ export default function Home() {
         </ButtonGroup>
       </div>
 
-      {/* Main Layout Grid (Active Tab Content vs. Control Center Side Panel) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start mt-2">
-        {/* Left Column: Dynamic Panels */}
         <div className="lg:col-span-8 flex flex-col gap-6">
-          {/* TAB 1: FLIGHTS & SEARCH RESULTS */}
           {activeTab === "voos" && (
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between pb-1 border-b border-slate-200/40">
@@ -586,7 +586,6 @@ export default function Home() {
                 )}
               </div>
 
-              {/* SEARCH RESULTS VIEW */}
               {isSearchingLoading ? (
                 <div className="flex flex-col items-center justify-center py-12 gap-4">
                   <Spinner size="lg" color="accent" />
@@ -642,7 +641,6 @@ export default function Home() {
                       key={idx}
                       className="bg-white/60 border border-white/80 rounded-2xl p-5 hover:bg-white/95 transition-all shadow-[0_4px_24px_-4px_rgba(79,119,186,0.04)] hover:shadow-[0_8px_32px_-4px_rgba(79,119,186,0.08)] flex flex-col md:flex-row md:items-center justify-between gap-6"
                     >
-                      {/* Carrier Details */}
                       <div className="flex items-center gap-4 md:w-1/4">
                         <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 border border-blue-100/50 flex items-center justify-center shrink-0">
                           <SvgIcon name="plane" className="w-5 h-5 rotate-45" />
@@ -653,7 +651,6 @@ export default function Home() {
                         </div>
                       </div>
 
-                      {/* Flight Path Graphic */}
                       <div className="flex-grow flex items-center justify-center gap-6">
                         <div className="w-20">
                           <div className="text-base font-bold text-slate-800">{flight.depTime}</div>
@@ -678,7 +675,6 @@ export default function Home() {
                         </div>
                       </div>
 
-                      {/* Select Flight Action */}
                       <div className="flex items-center justify-between md:justify-end gap-4 border-t md:border-t-0 border-slate-100/50 pt-3 md:pt-0">
                         <div className="text-right">
                           <span className="text-sm font-extrabold text-blue-900">{flight.price}</span>
@@ -696,7 +692,6 @@ export default function Home() {
                   ))}
                 </div>
               ) : (
-                /* DEFAULT ACTIVE SCHEDULED FLIGHTS DASHBOARD */
                 <div className="flex flex-col gap-4">
                   {[
                     {
@@ -749,7 +744,6 @@ export default function Home() {
                       key={flight.id}
                       className="bg-white/60 border border-white/80 rounded-2xl p-5 hover:bg-white/85 transition-all shadow-[0_4px_24px_-4px_rgba(79,119,186,0.04)] flex flex-col gap-4"
                     >
-                      {/* Flight Header */}
                       <div className="flex flex-wrap items-center justify-between gap-3 pb-2.5 border-b border-slate-100/50">
                         <div className="flex items-center gap-3">
                           <span className="text-xs font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100/40">
@@ -767,7 +761,6 @@ export default function Home() {
                         </Chip>
                       </div>
 
-                      {/* Flight Route, Weather Info and Times */}
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
                         <div className="flex flex-col">
                           <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Rota</span>
@@ -797,7 +790,6 @@ export default function Home() {
                         </div>
                       </div>
 
-                      {/* Flight Live Progress Bar (if in flight or in prep) */}
                       <div className="flex flex-col gap-1.5 mt-1.5">
                         <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold">
                           <span>Status da Preparação / Rota</span>
@@ -817,7 +809,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* TAB 2: FLIGHT HISTORY */}
           {activeTab === "historico" && (
             <div className="flex flex-col gap-4 animate-fade-in">
               <div className="flex items-center justify-between pb-1 border-b border-slate-200/40">
@@ -884,7 +875,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* TAB 3: WEATHER FORECAST */}
           {activeTab === "clima" && (
             <div className="flex flex-col gap-4 animate-fade-in">
               <div className="flex items-center justify-between pb-1 border-b border-slate-200/40">
@@ -945,7 +935,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* TAB 4: AI ROUTING */}
           {activeTab === "roteamento" && (
             <div className="flex flex-col gap-4 animate-fade-in">
               <div className="flex items-center justify-between pb-1 border-b border-slate-200/40">
@@ -1039,7 +1028,6 @@ export default function Home() {
                 </Button>
               </Card>
 
-              {/* ROUTE CALCULATION DISPLAY RESULT */}
               {isRoutingLoading ? (
                 <Card className="bg-white/60 border border-white/80 rounded-2xl p-8 flex flex-col items-center justify-center gap-4 shadow-sm animate-fade-in">
                   <Spinner size="lg" color="accent" />
@@ -1105,7 +1093,6 @@ export default function Home() {
           )}
         </div>
 
-        {/* Right Column: Control Center Side Panel */}
         <div className="lg:col-span-4 flex flex-col gap-6">
           <Card className="backdrop-blur-xl bg-white/60 border border-white/80 rounded-3xl p-6 shadow-[0_12px_40px_-8px_rgba(79,119,186,0.06)] flex flex-col gap-5">
             <div className="flex items-center justify-between pb-2.5 border-b border-slate-100/40">
