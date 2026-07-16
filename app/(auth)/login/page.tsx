@@ -6,6 +6,30 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { TextField, Label, FieldError, toast, Button, Spinner } from "@heroui/react";
 
+const translateError = (msg: string) => {
+  if (!msg) return "E-mail ou senha incorretos.";
+  const lowerMsg = msg.toLowerCase();
+  if (lowerMsg.includes("invalid credentials") || lowerMsg.includes("invalid email or password") || lowerMsg.includes("mismatch")) {
+    return "E-mail ou senha incorretos.";
+  }
+  if (lowerMsg.includes("user not found")) {
+    return "Usuário não cadastrado.";
+  }
+  if (lowerMsg.includes("password") && (lowerMsg.includes("invalid") || lowerMsg.includes("incorrect"))) {
+    return "Senha incorreta.";
+  }
+  if (lowerMsg.includes("required")) {
+    return "Todos os campos são obrigatórios.";
+  }
+  if (lowerMsg.includes("unauthorized") || lowerMsg.includes("not authorized")) {
+    return "Acesso não autorizado.";
+  }
+  if (lowerMsg.includes("fetch") || lowerMsg.includes("failed to fetch") || lowerMsg.includes("network")) {
+    return "Não foi possível conectar ao servidor de autenticação.";
+  }
+  return msg;
+};
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -95,11 +119,11 @@ function LoginForm() {
 
                   const data = await response.json();
 
-                  const maxAge = rememberMe ? 60 * 60 * 24 * 7 : 60 * 60 * 24; 
-                  document.cookie = `auth_token=${data.access_token}; path=/; max-age=${maxAge}; SameSite=Lax; Secure`;
-                  document.cookie = `refresh_token=${data.refresh_token}; path=/; max-age=${maxAge}; SameSite=Lax; Secure`;
-                  document.cookie = `user_name=${encodeURIComponent(data.user.name)}; path=/; max-age=${maxAge}; SameSite=Lax; Secure`;
-                  document.cookie = `user_email=${encodeURIComponent(data.user.email)}; path=/; max-age=${maxAge}; SameSite=Lax; Secure`;
+                  const cookieSuffix = rememberMe ? `; max-age=${60 * 60 * 24 * 7}` : ""; 
+                  document.cookie = `auth_token=${data.access_token}; path=/${cookieSuffix}; SameSite=Lax; Secure`;
+                  document.cookie = `refresh_token=${data.refresh_token}; path=/${cookieSuffix}; SameSite=Lax; Secure`;
+                  document.cookie = `user_name=${encodeURIComponent(data.user.name)}; path=/${cookieSuffix}; SameSite=Lax; Secure`;
+                  document.cookie = `user_email=${encodeURIComponent(data.user.email)}; path=/${cookieSuffix}; SameSite=Lax; Secure`;
 
                   if (rememberMe) {
                     localStorage.setItem("remembered_email", email);
@@ -110,7 +134,7 @@ function LoginForm() {
                   router.push(callbackUrl);
                 } catch (error: any) {
                   toast.danger("Erro ao fazer login", {
-                    description: error.message || "Não foi possível conectar ao servidor de autenticação.",
+                    description: translateError(error.message || ""),
                   });
                 } finally {
                   setIsLoading(false);
