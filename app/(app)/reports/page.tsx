@@ -55,7 +55,6 @@ export default function ReportsPage() {
         </div>
       </header>
 
-      {/* Metrics Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {metrics.map((metric) => (
           <Card
@@ -80,7 +79,6 @@ export default function ReportsPage() {
         ))}
       </div>
 
-      {/* Reports Section */}
       <div className="flex flex-col gap-3 mt-2">
         <h3 className="text-sm font-bold text-slate-400 tracking-wider uppercase flex items-center gap-2">
           <SvgIcon name="bar-chart-02" className="w-4 h-4 text-blue-600" />

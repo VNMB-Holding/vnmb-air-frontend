@@ -39,7 +39,6 @@ export default function ProfilePage() {
 
   return (
     <div className="w-full flex flex-col gap-6 pb-12 text-slate-800 animate-fade-in">
-      {/* Header */}
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2 border-b border-slate-200/40">
         <div>
           <h1 className="text-xl md:text-2xl font-bold tracking-tight text-slate-800">Meu Perfil</h1>
@@ -57,9 +56,7 @@ export default function ProfilePage() {
         </Button>
       </header>
 
-      {/* Profile Card + Info */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left: Profile Card */}
         <div className="lg:col-span-4 flex flex-col gap-6">
           <Card className="p-6 bg-white/60 border border-white/80 backdrop-blur-xl rounded-3xl shadow-[0_12px_40px_-8px_rgba(79,119,186,0.06)] flex flex-col items-center gap-4">
             <Avatar className="w-20 h-20 text-2xl font-bold border-2 border-slate-200/60 shadow-sm bg-gradient-to-br from-blue-50 to-blue-100 text-blue-700">
@@ -97,9 +94,7 @@ export default function ProfilePage() {
           </Card>
         </div>
 
-        {/* Right: Stats + Certifications + Activity */}
         <div className="lg:col-span-8 flex flex-col gap-6">
-          {/* Stats Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {stats.map((stat) => (
               <Card key={stat.label} className="p-4 bg-white/60 border border-white/80 backdrop-blur-xl rounded-2xl shadow-[0_4px_24px_-4px_rgba(79,119,186,0.04)] flex flex-col items-center gap-2 text-center">
@@ -112,7 +107,6 @@ export default function ProfilePage() {
             ))}
           </div>
 
-          {/* Certifications */}
           <Card className="p-5 bg-white/60 border border-white/80 backdrop-blur-xl rounded-3xl shadow-[0_12px_40px_-8px_rgba(79,119,186,0.06)] flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-bold text-slate-500 tracking-wider uppercase flex items-center gap-2">
@@ -151,7 +145,6 @@ export default function ProfilePage() {
             </div>
           </Card>
 
-          {/* Recent Activity */}
           <Card className="p-5 bg-white/60 border border-white/80 backdrop-blur-xl rounded-3xl shadow-[0_12px_40px_-8px_rgba(79,119,186,0.06)] flex flex-col gap-4">
             <h3 className="text-xs font-bold text-slate-500 tracking-wider uppercase flex items-center gap-2">
               <SvgIcon name="activity" className="w-4 h-4 text-blue-600" />

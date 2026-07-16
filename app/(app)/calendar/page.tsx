@@ -8,7 +8,6 @@ import { CalendarDate, today, getLocalTimeZone } from "@internationalized/date";
 export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState<CalendarDate>(today(getLocalTimeZone()));
 
-  // Mock flight list with detailed, premium stats
   const mockFlights = [
     {
       id: "1",
@@ -68,7 +67,6 @@ export default function CalendarPage() {
 
   return (
     <div className="w-full flex flex-col gap-6 pb-12 text-slate-800 animate-fade-in">
-      {/* Clean operational header */}
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2 border-b border-slate-200/40">
         <div>
           <h1 className="text-xl md:text-2xl font-bold tracking-tight text-slate-800">Calendário de Escalas</h1>
@@ -79,7 +77,6 @@ export default function CalendarPage() {
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Calendar Widget & Daily Stats */}
         <div className="lg:col-span-5 flex flex-col gap-6">
           <Card className="p-5 bg-white/60 border border-white/80 backdrop-blur-xl rounded-3xl shadow-[0_12px_40px_-8px_rgba(79,119,186,0.06)] w-full">
             <div className="flex justify-center heroui-calendar-wrapper">
@@ -114,7 +111,6 @@ export default function CalendarPage() {
             </div>
           </Card>
 
-          {/* Métricas Operacionais do Dia */}
           <Card className="p-5 bg-white/60 border border-white/80 backdrop-blur-xl rounded-3xl shadow-[0_12px_40px_-8px_rgba(79,119,186,0.06)] flex flex-col gap-4">
             <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">
               Resumo Operacional do Dia
@@ -136,7 +132,6 @@ export default function CalendarPage() {
           </Card>
         </div>
 
-        {/* Right Column: Flight Tickets list */}
         <div className="lg:col-span-7 flex flex-col gap-4">
           <h3 className="text-xs font-bold text-slate-500 tracking-wider uppercase flex items-center gap-2 pl-1">
             <SvgIcon name="calendar" className="w-4 h-4 text-blue-600" />
@@ -149,7 +144,6 @@ export default function CalendarPage() {
                 key={flight.id}
                 className="bg-white/60 border border-white/80 backdrop-blur-xl rounded-3xl p-5 hover:bg-white/90 transition-all shadow-[0_4px_24px_-4px_rgba(79,119,186,0.04)] hover:shadow-[0_8px_32px_-4px_rgba(79,119,186,0.08)] flex flex-col gap-4"
               >
-                {/* Header info */}
                 <div className="flex flex-wrap items-center justify-between gap-3 pb-2.5 border-b border-slate-100/50">
                   <div className="flex items-center gap-3">
                     <span className="text-xs font-mono font-bold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-100/40">
@@ -169,16 +163,13 @@ export default function CalendarPage() {
                   </Chip>
                 </div>
 
-                {/* Details grid */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-                  {/* Origin City */}
                   <div className="flex flex-col">
                     <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Origem</span>
                     <span className="text-sm font-extrabold text-slate-800 mt-0.5">{flight.depCity}</span>
                     <span className="text-xs font-bold text-slate-400 mt-0.5">{flight.depCode} • {flight.time}</span>
                   </div>
 
-                  {/* Visual Path Connector */}
                   <div className="flex flex-col items-center justify-center relative px-2">
                     <span className="text-[9px] text-slate-400 font-bold mb-1.5">{flight.duration}</span>
                     <div className="w-full h-[1.5px] bg-slate-200 relative flex items-center justify-center">
@@ -191,7 +182,6 @@ export default function CalendarPage() {
                     <span className="text-[9px] text-slate-500 font-medium mt-1.5 truncate">Voo Direto</span>
                   </div>
 
-                  {/* Destination City */}
                   <div className="flex flex-col text-right md:text-right">
                     <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Destino</span>
                     <span className="text-sm font-extrabold text-slate-800 mt-0.5">{flight.arrCity}</span>
@@ -199,7 +189,6 @@ export default function CalendarPage() {
                   </div>
                 </div>
 
-                {/* Footer specs / weather / crew details */}
                 <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100/50 bg-slate-50/20 px-3 py-2.5 rounded-2xl">
                   <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
                     <SvgIcon name="user-01" className="w-4 h-4 text-slate-400" />

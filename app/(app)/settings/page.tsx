@@ -6,14 +6,12 @@ import { SvgIcon } from "@/components/SvgIcon";
 import type { Key } from "@heroui/react";
 
 export default function SettingsPage() {
-  // Notification preferences
   const [emailNotifs, setEmailNotifs] = useState(true);
   const [pushNotifs, setPushNotifs] = useState(true);
   const [flightAlerts, setFlightAlerts] = useState(true);
   const [weatherAlerts, setWeatherAlerts] = useState(true);
   const [crewAlerts, setCrewAlerts] = useState(false);
 
-  // Preferences
   const [language, setLanguage] = useState<Key>("pt-BR");
   const [timezone, setTimezone] = useState<Key>("UTC-3");
   const [units, setUnits] = useState<Key>("metric");
@@ -27,7 +25,6 @@ export default function SettingsPage() {
 
   return (
     <div className="w-full flex flex-col gap-6 pb-12 text-slate-800 animate-fade-in">
-      {/* Header */}
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2 border-b border-slate-200/40">
         <div>
           <h1 className="text-xl md:text-2xl font-bold tracking-tight text-slate-800">Configurações</h1>
@@ -46,9 +43,7 @@ export default function SettingsPage() {
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column */}
         <div className="lg:col-span-7 flex flex-col gap-6">
-          {/* Notifications Section */}
           <Card className="p-5 bg-white/60 border border-white/80 backdrop-blur-xl rounded-3xl shadow-[0_12px_40px_-8px_rgba(79,119,186,0.06)] flex flex-col gap-5">
             <div className="flex items-center gap-2 pb-2 border-b border-slate-100/50">
               <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100/50 flex items-center justify-center">
@@ -148,7 +143,6 @@ export default function SettingsPage() {
             </div>
           </Card>
 
-          {/* Security Section */}
           <Card className="p-5 bg-white/60 border border-white/80 backdrop-blur-xl rounded-3xl shadow-[0_12px_40px_-8px_rgba(79,119,186,0.06)] flex flex-col gap-5">
             <div className="flex items-center gap-2 pb-2 border-b border-slate-100/50">
               <div className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-100/50 flex items-center justify-center">
@@ -220,7 +214,6 @@ export default function SettingsPage() {
           </Card>
         </div>
 
-        {/* Right Column: Preferences */}
         <div className="lg:col-span-5 flex flex-col gap-6">
           <Card className="p-5 bg-white/60 border border-white/80 backdrop-blur-xl rounded-3xl shadow-[0_12px_40px_-8px_rgba(79,119,186,0.06)] flex flex-col gap-5">
             <div className="flex items-center gap-2 pb-2 border-b border-slate-100/50">
@@ -234,10 +227,9 @@ export default function SettingsPage() {
             </div>
 
             <div className="flex flex-col gap-4">
-              {/* Language */}
               <Select
                 selectedKey={language}
-                onSelectionChange={setLanguage}
+                onSelectionChange={(key) => key && setLanguage(key)}
                 className="w-full"
                 aria-label="Idioma"
               >
@@ -255,10 +247,9 @@ export default function SettingsPage() {
                 </Select.Popover>
               </Select>
 
-              {/* Timezone */}
               <Select
                 selectedKey={timezone}
-                onSelectionChange={setTimezone}
+                onSelectionChange={(key) => key && setTimezone(key)}
                 className="w-full"
                 aria-label="Fuso Horário"
               >
@@ -277,10 +268,9 @@ export default function SettingsPage() {
                 </Select.Popover>
               </Select>
 
-              {/* Units */}
               <Select
                 selectedKey={units}
-                onSelectionChange={setUnits}
+                onSelectionChange={(key) => key && setUnits(key)}
                 className="w-full"
                 aria-label="Unidades de Medida"
               >
@@ -298,10 +288,9 @@ export default function SettingsPage() {
                 </Select.Popover>
               </Select>
 
-              {/* Date Format */}
               <Select
                 selectedKey={dateFormat}
-                onSelectionChange={setDateFormat}
+                onSelectionChange={(key) => key && setDateFormat(key)}
                 className="w-full"
                 aria-label="Formato de Data"
               >
@@ -321,7 +310,6 @@ export default function SettingsPage() {
             </div>
           </Card>
 
-          {/* System Info */}
           <Card className="p-5 bg-white/60 border border-white/80 backdrop-blur-xl rounded-3xl shadow-[0_12px_40px_-8px_rgba(79,119,186,0.06)] flex flex-col gap-4">
             <h3 className="text-xs font-bold text-slate-500 tracking-wider uppercase flex items-center gap-2">
               <SvgIcon name="info-circle" className="w-4 h-4 text-blue-600" />
