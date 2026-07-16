@@ -105,6 +105,11 @@ export default function CalendarPage() {
                     {(date) => <Calendar.Cell date={date} />}
                   </Calendar.GridBody>
                 </Calendar.Grid>
+                <Calendar.YearPickerGrid>
+                  <Calendar.YearPickerGridBody>
+                    {({ year }) => <Calendar.YearPickerCell year={year} />}
+                  </Calendar.YearPickerGridBody>
+                </Calendar.YearPickerGrid>
               </Calendar>
             </div>
           </Card>
@@ -155,8 +160,8 @@ export default function CalendarPage() {
                     </span>
                   </div>
                   <Chip
-                    color={flight.statusColor as "success" | "warning" | "primary"}
-                    variant="flat"
+                    color={flight.statusColor === "primary" ? "default" : flight.statusColor as "success" | "warning" | "default"}
+                    variant="soft"
                     size="sm"
                     className="font-bold text-[9px] uppercase h-5 min-w-0"
                   >

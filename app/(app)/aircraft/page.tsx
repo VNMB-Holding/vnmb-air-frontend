@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Card, Chip, Button, Tooltip } from "@heroui/react";
+import { Card, Chip, Button } from "@heroui/react";
 import { SvgIcon } from "@/components/SvgIcon";
 
 export default function AircraftPage() {
@@ -13,7 +13,7 @@ export default function AircraftPage() {
       capacity: "16 Passageiros",
       range: "13.900 km",
       status: "Em Voo",
-      statusColor: "primary",
+      statusColor: "accent",
       speed: "Mach 0.925 (982 km/h)",
       ceiling: "51.000 ft (15.545 m)",
       engines: "2x Rolls-Royce BR725",
@@ -103,8 +103,8 @@ export default function AircraftPage() {
                       </span>
                     </div>
                     <Chip
-                      color={aircraft.statusColor as "primary" | "success" | "warning"}
-                      variant="flat"
+                      color={aircraft.statusColor as "accent" | "success" | "warning"}
+                      variant="soft"
                       size="sm"
                       className="font-bold text-[9px] uppercase h-5 min-w-0"
                     >
@@ -156,8 +156,8 @@ export default function AircraftPage() {
               </div>
               <div className="flex items-center gap-2">
                 <Chip
-                  color={selectedAircraft.statusColor as "primary" | "success" | "warning"}
-                  variant="flat"
+                  color={selectedAircraft.statusColor as "accent" | "success" | "warning"}
+                  variant="soft"
                   size="sm"
                   className="font-bold text-[10px] uppercase h-5.5 min-w-0 px-3"
                 >
@@ -172,8 +172,6 @@ export default function AircraftPage() {
                 <iframe
                   title="Gulfstream G650"
                   allowFullScreen
-                  mozallowfullscreen="true"
-                  webkitallowfullscreen="true"
                   allow="autoplay; fullscreen; xr-spatial-tracking"
                   src="https://sketchfab.com/models/67451e56d38746de86667347d7a56587/embed?autostart=1&camera=0&preload=1&transparent=1"
                   className="w-full h-full border-none rounded-2xl z-10"
@@ -182,8 +180,6 @@ export default function AircraftPage() {
                 <iframe
                   title="Embraer Legacy 600"
                   allowFullScreen
-                  mozallowfullscreen="true"
-                  webkitallowfullscreen="true"
                   allow="autoplay; fullscreen; xr-spatial-tracking"
                   src="https://sketchfab.com/models/a9a9b1e004634237b1775e4d3231770b/embed?autostart=1&camera=0&preload=1&transparent=1"
                   className="w-full h-full border-none rounded-2xl z-10"
@@ -306,14 +302,11 @@ export default function AircraftPage() {
               </div>
 
               <div className="flex items-center gap-2">
-                <Tooltip content={`Custos operacionais: ${selectedAircraft.costPerHour} / hora de voo`}>
-                  <div className="flex flex-col text-right mr-2">
-                    <span className="text-[9px] text-slate-400 font-bold uppercase">Custo Estimado</span>
-                    <span className="text-xs font-bold text-blue-900">{selectedAircraft.costPerHour}/h</span>
-                  </div>
-                </Tooltip>
+                <div className="flex flex-col text-right mr-2" title={`Custos operacionais: ${selectedAircraft.costPerHour} / hora de voo`}>
+                  <span className="text-[9px] text-slate-400 font-bold uppercase">Custo Estimado</span>
+                  <span className="text-xs font-bold text-blue-900">{selectedAircraft.costPerHour}/h</span>
+                </div>
                 <Button
-                  color="primary"
                   size="sm"
                   className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 h-9 rounded-xl transition-all shadow-xs"
                 >
