@@ -1,11 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { TextField, Label, FieldError, toast, Button, Spinner } from "@heroui/react";
 
-export default function LoginPage() {
+function LoginForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -14,13 +19,11 @@ export default function LoginPage() {
 
   const toggleVisibility = () => setIsVisible(!isVisible);
 
-  // Validation rules
   const isEmailInvalid = email.length > 0 && !/\S+@\S+\.\S+/.test(email);
   const isPasswordInvalid = password.length > 0 && password.length < 6;
 
   return (
     <div className="relative h-dvh w-full flex flex-col justify-between overflow-hidden font-sans">
-      {/* Background Image */}
       <div className="absolute inset-0 z-0">
         <Image
           src="/images/airplane_wing.svg"
@@ -29,12 +32,10 @@ export default function LoginPage() {
           priority
           className="object-cover object-center scale-x-[-1]"
         />
-        {/* Soft gradient overlay for readability without making it too dark */}
         <div className="absolute inset-0 bg-black/20" />
         <div className="absolute inset-0 bg-gradient-to-tr from-black/45 via-transparent to-transparent" />
       </div>
 
-      {/* Transparent Header */}
       <header className="z-10 w-full bg-transparent py-6 px-6 md:px-12 flex items-center justify-between">
         <Link href="/" className="inline-block">
           <Image
@@ -48,9 +49,7 @@ export default function LoginPage() {
         </Link>
       </header>
 
-      {/* Main Content Area */}
       <div className="z-10 flex flex-col md:flex-row items-center justify-center md:justify-between w-full max-w-7xl mx-auto px-6 md:px-12 py-8 md:py-16 gap-12 md:gap-24 flex-grow overflow-hidden">
-        {/* Left Side: Typography */}
         <div className="flex text-white text-left flex-col gap-4 max-w-lg self-center animate-fade-in">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-light tracking-tight leading-tight">
             Voe além.
@@ -60,13 +59,10 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Right Side: Login Card */}
         <div className="w-full max-w-[400px] animate-fade-in flex flex-col gap-4 mx-auto md:mx-0">
-          {/* Glassmorphic Container */}
           <div className="backdrop-blur-3xl bg-white/[0.08] border border-white/10 rounded-[24px] overflow-hidden shadow-2xl w-full">
-            {/* Form Fields */}
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
                 if (isEmailInvalid || isPasswordInvalid || !email || !password) {
                   toast.danger("Erro ao fazer login", {
@@ -75,22 +71,48 @@ export default function LoginPage() {
                   return;
                 }
                 setIsLoading(true);
-                setTimeout(() => {
-                  setIsLoading(false);
-                  toast.success("Login realizado com sucesso!", {
-                    description: `Bem-vindo de volta! E-mail: ${email}`,
+                try {
+                  const response = await fetch("https://vnmb-identity-api.onrender.com/api/auth/login", {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ email, password, client_id: "vnmb-air" }),
                   });
-                }, 2000);
+
+                  if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.message || "E-mail ou senha incorretos.");
+                  }
+
+                  const data = await response.json();
+
+                  const maxAge = rememberMe ? 60 * 60 * 24 * 7 : 60 * 60 * 24; 
+                  document.cookie = `auth_token=${data.access_token}; path=/; max-age=${maxAge}; SameSite=Lax; Secure`;
+                  document.cookie = `refresh_token=${data.refresh_token}; path=/; max-age=${maxAge}; SameSite=Lax; Secure`;
+                  document.cookie = `user_name=${encodeURIComponent(data.user.name)}; path=/; max-age=${maxAge}; SameSite=Lax; Secure`;
+                  document.cookie = `user_email=${encodeURIComponent(data.user.email)}; path=/; max-age=${maxAge}; SameSite=Lax; Secure`;
+
+                  toast.success("Login realizado com sucesso!", {
+                    description: `Bem-vindo de volta, ${data.user.name}!`,
+                  });
+
+                  router.push(callbackUrl);
+                } catch (error: any) {
+                  toast.danger("Erro ao fazer login", {
+                    description: error.message || "Não foi possível conectar ao servidor de autenticação.",
+                  });
+                } finally {
+                  setIsLoading(false);
+                }
               }}
               className="p-8 sm:p-10 flex flex-col gap-6"
             >
-              {/* Welcome text */}
               <div className="flex flex-col gap-1.5 mb-2">
                 <h2 className="text-xl font-medium text-white tracking-tight">Bem-vindo de volta</h2>
                 <p className="text-xs text-white/50">Insira seus dados para acessar sua reserva.</p>
               </div>
 
-              {/* Email Input */}
               <TextField
                 isRequired
                 type="email"
@@ -103,8 +125,12 @@ export default function LoginPage() {
                   E-mail
                 </Label>
                 <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={isLoading}
                   placeholder="john.doe@example.com"
-                  className="w-full h-10 bg-transparent border-b border-white/20 focus:border-white/60 text-white placeholder:text-white/25 outline-none transition-all duration-200 text-sm font-light pb-1"
+                  className="w-full h-10 bg-transparent border-b border-white/20 focus:border-white/60 text-white placeholder:text-white/25 outline-none transition-all duration-200 text-sm font-light pb-1 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 {isEmailInvalid && (
                   <FieldError className="text-[10px] text-red-400 mt-1 font-light">
@@ -113,7 +139,6 @@ export default function LoginPage() {
                 )}
               </TextField>
 
-              {/* Password Input */}
               <TextField
                 isRequired
                 type={isVisible ? "text" : "password"}
@@ -127,12 +152,17 @@ export default function LoginPage() {
                 </Label>
                 <div className="relative">
                   <input
+                    type={isVisible ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={isLoading}
                     placeholder="••••••••"
-                    className="w-full h-10 bg-transparent border-b border-white/20 focus:border-white/60 text-white placeholder:text-white/25 outline-none transition-all duration-200 text-sm font-light pb-1 pr-10"
+                    className="w-full h-10 bg-transparent border-b border-white/20 focus:border-white/60 text-white placeholder:text-white/25 outline-none transition-all duration-200 text-sm font-light pb-1 pr-10 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <button
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors focus:outline-none"
                     type="button"
+                    disabled={isLoading}
                     onClick={toggleVisibility}
                     aria-label="toggle password visibility"
                   >
@@ -155,14 +185,13 @@ export default function LoginPage() {
                 )}
               </TextField>
 
-              {/* Actions Row */}
               <div className="flex items-center justify-between -mt-2">
                 <button
                   type="button"
+                  disabled={isLoading}
                   onClick={() => setRememberMe(!rememberMe)}
-                  className="flex items-center gap-2.5 focus:outline-none group select-none"
+                  className="flex items-center gap-2.5 focus:outline-none group select-none disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {/* Custom Apple-like Switch */}
                   <div
                     className={`relative w-8 h-4.5 rounded-full transition-colors duration-250 ease-in-out border border-white/5 ${rememberMe ? "bg-blue-600" : "bg-white/10"
                       }`}
@@ -185,11 +214,10 @@ export default function LoginPage() {
                 </Link>
               </div>
 
-              {/* Submit Button */}
               <Button
                 type="submit"
                 isPending={isLoading}
-                className="w-full h-11 mt-2 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-medium tracking-wide text-sm transition-all duration-200 shadow-lg shadow-blue-600/25 hover:shadow-blue-500/35 flex items-center justify-center gap-2 group"
+                className="w-full h-11 mt-2 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-medium tracking-wide text-sm transition-all duration-200 shadow-lg shadow-blue-600/25 hover:shadow-blue-500/35 flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {({ isPending }) => (
                   <>
@@ -200,7 +228,6 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            {/* Bottom info section */}
             <div className="bg-white/[0.02] border-t border-white/5 p-6 sm:px-8 flex flex-col gap-3 text-[11px] text-white/40 leading-relaxed">
               <div className="flex items-start gap-2.5">
                 <svg className="w-3.5 h-3.5 text-white/30 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
@@ -215,7 +242,6 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Footer */}
       <footer className="z-10 w-full text-center py-4 text-[9px] text-white/20 font-light tracking-widest uppercase">
         <Link href="/legal" className="hover:underline hover:text-white/50 transition-colors">
           aviso legal
@@ -224,5 +250,17 @@ export default function LoginPage() {
         <span>© 2026 vnmb air</span>
       </footer>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="h-dvh w-full flex items-center justify-center bg-[#070b13]">
+        <Spinner size="lg" color="current" className="text-white" />
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
