@@ -8,17 +8,43 @@ import { SvgIcon } from "@/components/SvgIcon";
 import { Tabs, Avatar, Badge, Dropdown, Label, Popover, Separator, toast, Spinner } from "@heroui/react";
 import { ArrowRightFromSquare, Gear, Person } from "@gravity-ui/icons";
 
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return decodeURIComponent(parts.pop()?.split(";").shift() || "");
+  return null;
+}
+
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [userName, setUserName] = useState("Usuário");
+  const [userEmail, setUserEmail] = useState("");
+  const [userInitials, setUserInitials] = useState("US");
+
+  useEffect(() => {
+    const name = getCookie("user_name") || "Usuário";
+    const email = getCookie("user_email") || "";
+    setUserName(name);
+    setUserEmail(email);
+
+    const initials = name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .substring(0, 2);
+    setUserInitials(initials || "US");
+  }, [pathname]);
 
   useEffect(() => {
     setIsTransitioning(true);
     const timer = setTimeout(() => {
       setIsTransitioning(false);
-    }, 400); // tempo suave de transição
+    }, 400); 
 
     return () => clearTimeout(timer);
   }, [pathname]);
@@ -58,7 +84,6 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     { id: "reports", label: "Relatórios", icon: "bar-chart-02", path: "/reports" },
   ];
 
-  // Active tab selection based on current route pathname
   const activeItem = menuItems.find(
     (item) => pathname === item.path || (item.path !== "/" && pathname.startsWith(item.path + "/"))
   );
@@ -74,12 +99,9 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="relative w-screen h-screen overflow-hidden flex flex-col font-sans text-slate-800 bg-gradient-to-br from-[#F4F8FF] via-[#E1EDFF] to-[#C5DCFF]">
-      {/* Main Content Pane (Sticky navbar + scrolling content) */}
       <div className="relative z-10 w-full h-full flex flex-col overflow-hidden">
 
-        {/* Horizontal Navigation Header (Light Glass styling) */}
         <header className="w-full py-1.5 px-6 md:px-12 flex items-center justify-between shrink-0 z-20">
-          {/* Logo with App Icon */}
           <Link href="/" className="flex items-center gap-3" onClick={() => router.push("/")}>
             <Image
               src="/images/vnmb-air-logo-type.png"
@@ -91,7 +113,6 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
             />
           </Link>
 
-          {/* Navigation Items (Desktop) */}
           <Tabs
             selectedKey={currentTab}
             onSelectionChange={(key) => handleTabClick(key as string)}
@@ -120,9 +141,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
             </Tabs.ListContainer>
           </Tabs>
 
-          {/* Right Section: Search, Notification, Profile */}
           <div className="hidden xl:flex items-center gap-4">
-            {/* Notification Bell */}
             <Popover>
               <Badge.Anchor>
                 <Popover.Trigger className="bg-white/50 relative p-2 rounded-full text-slate-500 hover:text-slate-800 transition-colors flex items-center justify-center active:scale-95 cursor-pointer">
@@ -162,46 +181,64 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
             </Popover>
 
             <div className="flex items-center gap-2 border-l border-slate-200/50 pl-4 ml-2">
-              <Dropdown>
-                <Dropdown.Trigger className="rounded-full cursor-pointer">
-                  <Avatar className="w-9 h-9">
-                    <Avatar.Image src="/images/avatar.jpg" />
-                    <Avatar.Fallback className="bg-white text-slate-700 font-bold text-xs border border-slate-200/60 shadow-xs">
-                      BS
-                    </Avatar.Fallback>
-                  </Avatar>
-                </Dropdown.Trigger>
-                <Dropdown.Popover className="border border-slate-200 shadow-lg rounded-2xl bg-white/95 backdrop-blur-xl">
-                  <div className="px-3 pt-3 pb-1">
-                    <div className="flex items-center gap-2">
-                      <Avatar size="sm">
-                        <Avatar.Image src="/images/avatar.jpg" />
-                        <Avatar.Fallback className="bg-white text-slate-700 font-bold text-xs border border-slate-200/60 shadow-xs">
-                          BS
-                        </Avatar.Fallback>
-                      </Avatar>
-                      <div className="flex flex-col gap-0">
-                        <p className="text-sm leading-5 font-medium text-slate-800">Breno Souza</p>
-                        <p className="text-xs leading-none text-slate-400">breno@vnmb.com.br</p>
-                      </div>
-                    </div>
-                  </div>
-                  <Dropdown.Menu
-                    className="p-1"
-                    onAction={(key) => {
-                      switch (key) {
-                        case "dashboard":
-                          router.push("/");
-                          break;
-                        case "settings":
-                          router.push("/settings");
-                          break;
-                        case "logout":
-                          router.push("/login");
-                          break;
-                      }
-                    }}
-                  >
+               <Dropdown>
+                 <Dropdown.Trigger className="rounded-full cursor-pointer">
+                   <Avatar className="w-9 h-9">
+                     <Avatar.Fallback className="bg-[#C5DCFF] text-[#003184] font-bold text-xs border border-slate-200/60 shadow-xs">
+                       {userInitials}
+                     </Avatar.Fallback>
+                   </Avatar>
+                 </Dropdown.Trigger>
+                 <Dropdown.Popover className="border border-slate-200 shadow-lg rounded-2xl bg-white/95 backdrop-blur-xl">
+                   <div className="px-3 pt-3 pb-1">
+                     <div className="flex items-center gap-2">
+                       <Avatar size="sm">
+                         <Avatar.Fallback className="bg-[#C5DCFF] text-[#003184] font-bold text-xs border border-slate-200/60 shadow-xs">
+                           {userInitials}
+                         </Avatar.Fallback>
+                       </Avatar>
+                       <div className="flex flex-col gap-0">
+                         <p className="text-sm leading-5 font-medium text-slate-800">{userName}</p>
+                         <p className="text-xs leading-none text-slate-400">{userEmail}</p>
+                       </div>
+                     </div>
+                   </div>
+                   <Dropdown.Menu
+                     className="p-1"
+                     onAction={(key) => {
+                       switch (key) {
+                         case "dashboard":
+                           router.push("/");
+                           break;
+                         case "settings":
+                           router.push("/settings");
+                           break;
+                         case "logout": {
+                           const authToken = getCookie("auth_token");
+                           const refreshToken = getCookie("refresh_token");
+
+                           document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC";
+                           document.cookie = "refresh_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC";
+                           document.cookie = "user_name=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC";
+                           document.cookie = "user_email=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC";
+
+                           if (authToken && refreshToken) {
+                             fetch("https://vnmb-identity-api.onrender.com/api/auth/logout", {
+                               method: "POST",
+                               headers: {
+                                 "Content-Type": "application/json",
+                                 "Authorization": `Bearer ${authToken}`
+                               },
+                               body: JSON.stringify({ refresh_token: refreshToken })
+                             }).catch((err) => console.error("Erro ao invalidar sessão na API:", err));
+                           }
+
+                           router.push("/login");
+                           break;
+                         }
+                       }
+                     }}
+                   >
                     <Dropdown.Item id="dashboard" textValue="Painel" className="px-3 py-2 rounded-xl text-xs hover:bg-blue-50/50 cursor-pointer transition-all">
                       <div className="flex w-full items-center justify-between gap-2">
                         <Label className="cursor-pointer text-slate-700">Painel Operacional</Label>
@@ -227,9 +264,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          {/* Hamburger (Mobile/Tablet) */}
           <div className="flex xl:hidden items-center gap-3">
-            {/* Notification Indicator (compact) */}
             <Popover>
               <Popover.Trigger className="relative p-2 text-slate-500 hover:text-slate-800 rounded-full bg-white/30 flex items-center justify-center active:scale-95 cursor-pointer">
                 <SvgIcon name="bell-02" className="w-5 h-5" />
@@ -266,7 +301,6 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
               </Popover.Content>
             </Popover>
 
-            {/* Hamburger Button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="p-2 text-slate-600 hover:text-slate-800 rounded-full bg-white/30 border border-slate-200/50 transition-colors"
@@ -283,7 +317,6 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        {/* Mobile Navigation Drawer */}
         {isMobileMenuOpen && (
           <div className="absolute top-[80px] left-0 right-0 bg-white/95 backdrop-blur-2xl border-b border-slate-200 shadow-lg z-50 py-4 px-6 flex flex-col gap-2 xl:hidden animate-fade-in">
             {menuItems.map((item) => (
@@ -302,7 +335,6 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
-        {/* Main Scrolling Pane (using custom scrollbar) */}
         <main className="flex-grow overflow-y-auto light-scrollbar flex flex-col relative">
           {isTransitioning ? (
             <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-blue-900/10 backdrop-blur-md animate-fade-in transition-all">
