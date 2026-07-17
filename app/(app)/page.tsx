@@ -28,16 +28,13 @@ import type { Key } from "@heroui/react";
 import { SvgIcon } from "@/components/SvgIcon";
 import { CalendarDateTime } from "@internationalized/date";
 
-const airports = [
-  { id: "GRU", name: "São Paulo (GRU)", code: "GRU", city: "São Paulo", country: "Brasil" },
-  { id: "MIA", name: "Miami (MIA)", code: "MIA", city: "Miami", country: "Estados Unidos" },
-  { id: "GIG", name: "Rio de Janeiro (GIG)", code: "GIG", city: "Rio de Janeiro", country: "Brasil" },
-  { id: "MCO", name: "Orlando (MCO)", code: "MCO", city: "Orlando", country: "Estados Unidos" },
-  { id: "BSB", name: "Brasília (BSB)", code: "BSB", city: "Brasília", country: "Brasil" },
-  { id: "VCP", name: "Campinas (VCP)", code: "VCP", city: "Campinas", country: "Brasil" },
-  { id: "JFK", name: "New York (JFK)", code: "JFK", city: "New York", country: "Estados Unidos" },
-  { id: "LIS", name: "Lisboa (LIS)", code: "LIS", city: "Lisboa", country: "Portugal" },
-];
+import { getAircrafts } from "@/services/aircraft";
+import { getPilots } from "@/services/pilots";
+import { getFlights, scheduleFlight } from "@/services/flights";
+import { getAlerts } from "@/services/notifications";
+import { getTopAirports } from "@/services/airports";
+import { getHubWeather, type WeatherData } from "@/services/weather";
+
 
 const aircraftFleet = [
   { id: "g650", name: "Gulfstream G650ER", range: 13900 },
@@ -57,15 +54,98 @@ export default function Home() {
   const [isSearchingLoading, setIsSearchingLoading] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
+  const [fleet, setFleet] = useState<any[]>([]);
+  const [crew, setCrew] = useState<any[]>([]);
+  const [flights, setFlights] = useState<any[]>([]);
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const [isDashboardLoading, setIsDashboardLoading] = useState(true);
+
+  const [weatherData, setWeatherData] = useState<WeatherData[]>([]);
+  const [isWeatherLoading, setIsWeatherLoading] = useState(false);
+  const [airports, setAirports] = useState<any[]>([]);
+
   useEffect(() => {
     setIsMounted(true);
+    
+    async function fetchDashboardData() {
+      try {
+        const [acData, pData, fData, notifData, airpData] = await Promise.all([
+          getAircrafts(),
+          getPilots(),
+          getFlights(),
+          getAlerts(),
+          getTopAirports()
+        ]);
+        if (acData) setFleet(acData);
+        if (pData) setCrew(pData);
+        if (fData) setFlights(fData);
+        if (notifData) setAlerts(notifData);
+        if (airpData && airpData.success && airpData.data && airpData.data.length > 0) {
+          const formattedAirports = airpData.data.map((a: any) => ({
+            id: a.ident,
+            name: `${a.name} (${a.iataCode || a.ident})`,
+            code: a.iataCode || a.ident,
+            city: a.municipality || "Desconhecido",
+            country: a.isoCountry
+          }));
+          setAirports(formattedAirports);
+        } else {
+          // Fallback se o banco ainda não foi populado pelo Seed
+          setAirports([
+            { id: "GRU", name: "São Paulo (GRU)", code: "GRU", city: "São Paulo", country: "Brasil" },
+            { id: "MIA", name: "Miami (MIA)", code: "MIA", city: "Miami", country: "Estados Unidos" },
+            { id: "GIG", name: "Rio de Janeiro (GIG)", code: "GIG", city: "Rio de Janeiro", country: "Brasil" },
+            { id: "MCO", name: "Orlando (MCO)", code: "MCO", city: "Orlando", country: "Estados Unidos" },
+            { id: "BSB", name: "Brasília (BSB)", code: "BSB", city: "Brasília", country: "Brasil" },
+            { id: "VCP", name: "Campinas (VCP)", code: "VCP", city: "Campinas", country: "Brasil" },
+            { id: "JFK", name: "New York (JFK)", code: "JFK", city: "New York", country: "Estados Unidos" },
+            { id: "LIS", name: "Lisboa (LIS)", code: "LIS", city: "Lisboa", country: "Portugal" },
+          ]);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsDashboardLoading(false);
+      }
+    }
+    fetchDashboardData();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === "clima" && weatherData.length === 0 && !isWeatherLoading) {
+      setIsWeatherLoading(true);
+      getHubWeather()
+        .then(results => {
+          setWeatherData(results);
+          setIsWeatherLoading(false);
+        })
+        .catch(() => {
+          setIsWeatherLoading(false);
+        });
+    }
+  }, [activeTab]);
 
   const [routeOrigin, setRouteOrigin] = useState<Key | null>("GRU");
   const [routeDest, setRouteDest] = useState<Key | null>("MIA");
   const [routeAircraft, setRouteAircraft] = useState<Key | null>("phenom300");
   const [isRoutingLoading, setIsRoutingLoading] = useState(false);
   const [routeResult, setRouteResult] = useState<any>(null);
+
+  const calculateProgress = (dep?: string, arr?: string) => {
+    if (!dep || !arr) return 0;
+    const now = new Date().getTime();
+    const start = new Date(dep).getTime();
+    const end = new Date(arr).getTime();
+    
+    if (now < start) return 0;
+    if (now > end) return 100;
+    
+    const total = end - start;
+    if (total <= 0) return 100;
+    
+    const elapsed = now - start;
+    return Math.round((elapsed / total) * 100);
+  };
 
   const { contains } = useFilter({ sensitivity: "base" });
 
@@ -87,79 +167,33 @@ export default function Home() {
     });
   };
 
-  const handleCadastrarViagem = () => {
+  const handleCadastrarViagem = async () => {
     setIsCadastroLoading(true);
-    setTimeout(() => {
-      const orig = airports.find(a => a.id === originKey)?.name || "";
-      const dest = airports.find(a => a.id === destinationKey)?.name || "";
+    const flightData = {
+      origin: String(originKey),
+      destination: String(destinationKey),
+      aircraftId: String(cadastroAeronave),
+      pilotId: String(cadastroPiloto),
+      departureTime: departDate ? new Date(departDate.toString()).toISOString() : new Date().toISOString(),
+    };
+    
+    const res = await scheduleFlight(flightData);
+    setIsCadastroLoading(false);
+    
+    if (res?.success) {
       toast.success("Viagem cadastrada com sucesso!", {
-        description: `Voo de ${orig} para ${dest} registrado no sistema.`,
+        description: `Voo registrado no sistema.`,
       });
-      setIsCadastroLoading(false);
       setIsOpenModalCadastro(false);
-    }, 1200);
-  };
-
-  const handleCalculateRoute = () => {
-    if (!routeOrigin || !routeDest || !routeAircraft) {
-      toast("Por favor, preencha todos os campos para o roteamento.");
-      return;
-    }
-
-    setIsRoutingLoading(true);
-    setRouteResult(null);
-
-    setTimeout(() => {
-      const origItem = airports.find(a => a.id === routeOrigin);
-      const destItem = airports.find(a => a.id === routeDest);
-      const acItem = aircraftFleet.find(a => a.id === routeAircraft);
-
-      if (!origItem || !destItem || !acItem) return;
-
-      let baseDistance = 6500;
-      if (
-        (routeOrigin === "GRU" && routeDest === "GIG") ||
-        (routeOrigin === "GIG" && routeDest === "GRU")
-      ) {
-        baseDistance = 360;
-      } else if (
-        (routeOrigin === "GRU" && routeDest === "BSB") ||
-        (routeOrigin === "BSB" && routeDest === "GRU")
-      ) {
-        baseDistance = 880;
-      }
-
-      const needsRefuel = baseDistance > acItem.range;
-      const legs = [];
-
-      if (needsRefuel) {
-        const stop = "MCO";
-        legs.push({ from: origItem.code, to: stop, dist: Math.round(baseDistance * 0.8), time: "6h 15m", status: "Recomendado para Reabastecimento" });
-        legs.push({ from: stop, to: destItem.code, dist: Math.round(baseDistance * 0.2), time: "1h 45m", status: "Leg Final" });
-      } else {
-        const estTimeHours = Math.floor(baseDistance / 800);
-        const estTimeMin = Math.round(((baseDistance / 800) % 1) * 60);
-        legs.push({ from: origItem.code, to: destItem.code, dist: baseDistance, time: `${estTimeHours}h ${estTimeMin}m`, status: "Voo Direto" });
-      }
-
-      const totalTime = legs.reduce((acc, leg) => acc + (leg.from ? 7 : 0), 0); 
-      const fuelConsumption = Math.round(baseDistance * 4.2); 
-
-      setRouteResult({
-        aircraftName: acItem.name,
-        distance: baseDistance,
-        needsRefuel,
-        legs,
-        totalTime: needsRefuel ? "8h 30m total" : `${Math.floor(baseDistance / 800)}h ${Math.round(((baseDistance / 800) % 1) * 60)}m total`,
-        fuel: `${fuelConsumption.toLocaleString()} L`,
-        efficiency: needsRefuel ? "Eficiência Regular (Devido à escala de reabastecimento)" : "Alta Eficiência (Voo Direto Otimizado)",
-        co2: `${Math.round(fuelConsumption * 2.5)} kg CO2`,
+      // optionally refresh flights
+    } else {
+      toast("Erro ao cadastrar voo", {
+        description: res?.error || "Verifique os dados e tente novamente."
       });
-
-      setIsRoutingLoading(false);
-      toast.success("Rota otimizada pela IA com sucesso!");
-    }, 1200);
+    }
   };
+
+
 
   return (
     <div className="w-full flex flex-col gap-6 pb-8 text-slate-800 animate-fade-in">
@@ -172,7 +206,7 @@ export default function Home() {
 
         <div className="z-10 flex flex-col justify-start max-w-[60%]">
           <span className="text-[10px] md:text-xs font-bold text-blue-700 tracking-widest uppercase">
-            Quarta-feira, 24 de Março, 2026
+            {new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date())}
           </span>
           <h1 className="text-xl md:text-3xl font-extrabold tracking-wide text-slate-900 uppercase leading-tight mt-1.5">
             Portal Executivo VNMB
@@ -417,7 +451,7 @@ export default function Home() {
       <Modal>
         <Modal.Backdrop isOpen={isOpenModalCadastro} onOpenChange={setIsOpenModalCadastro} className="bg-slate-900/40 backdrop-blur-md">
           <Modal.Container placement="center">
-            <Modal.Dialog className="sm:max-w-lg bg-white/90 backdrop-blur-2xl border border-white/80 rounded-[32px] p-6 shadow-2xl animate-fade-in flex flex-col gap-5">
+            <Modal.Dialog aria-label="Cadastrar Viagem" className="sm:max-w-lg bg-white/90 backdrop-blur-2xl border border-white/80 rounded-[32px] p-6 shadow-2xl animate-fade-in flex flex-col gap-5">
               <Modal.CloseTrigger className="absolute right-6 top-6 text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors w-8 h-8 rounded-full flex items-center justify-center cursor-pointer" />
               <Modal.Header className="flex gap-3.5 items-center">
                 <Modal.Icon className="bg-blue-50 text-blue-600 border border-blue-100/50 rounded-2xl w-11 h-11 flex items-center justify-center shrink-0">
@@ -477,9 +511,9 @@ export default function Home() {
                     </Select.Trigger>
                     <Select.Popover className="border border-slate-200/60 shadow-lg rounded-2xl bg-white/95 backdrop-blur-xl">
                       <ListBox className="p-1">
-                        <ListBox.Item id="carlos" textValue="Capt. Carlos Silva" className="px-3 py-2 rounded-xl text-xs hover:bg-blue-50/50 cursor-pointer transition-all font-semibold text-slate-700">Capt. Carlos Silva</ListBox.Item>
-                        <ListBox.Item id="ana" textValue="Capt. Ana Oliveira" className="px-3 py-2 rounded-xl text-xs hover:bg-blue-50/50 cursor-pointer transition-all font-semibold text-slate-700">Capt. Ana Oliveira</ListBox.Item>
-                        <ListBox.Item id="lucas" textValue="Copiloto Lucas Costa" className="px-3 py-2 rounded-xl text-xs hover:bg-blue-50/50 cursor-pointer transition-all font-semibold text-slate-700">Copiloto Lucas Costa</ListBox.Item>
+                        {crew.map((pilot) => (
+                          <ListBox.Item key={pilot.id} id={pilot.id} textValue={pilot.name} className="px-3 py-2 rounded-xl text-xs hover:bg-blue-50/50 cursor-pointer transition-all font-semibold text-slate-700">{pilot.name}</ListBox.Item>
+                        ))}
                       </ListBox>
                     </Select.Popover>
                   </Select>
@@ -499,8 +533,8 @@ export default function Home() {
                     </Select.Trigger>
                     <Select.Popover className="border border-slate-200/60 shadow-lg rounded-2xl bg-white/95 backdrop-blur-xl">
                       <ListBox className="p-1">
-                        {aircraftFleet.map((ac) => (
-                          <ListBox.Item key={ac.id} id={ac.id} textValue={ac.name} className="px-3 py-2 rounded-xl text-xs hover:bg-blue-50/50 cursor-pointer transition-all font-semibold text-slate-700">{ac.name}</ListBox.Item>
+                        {fleet.map((ac) => (
+                          <ListBox.Item key={ac.id} id={ac.id} textValue={ac.model} className="px-3 py-2 rounded-xl text-xs hover:bg-blue-50/50 cursor-pointer transition-all font-semibold text-slate-700">{ac.model}</ListBox.Item>
                         ))}
                       </ListBox>
                     </Select.Popover>
@@ -553,7 +587,6 @@ export default function Home() {
           {[
             { id: "historico", tag: "Histórico de voos", icon: "clock" },
             { id: "clima", tag: "Previsão do Clima", icon: "cloud-01" },
-            { id: "roteamento", tag: "AI Roteamento", icon: "route" },
           ].map((item) => (
             <Button
               key={item.id}
@@ -712,53 +745,9 @@ export default function Home() {
                 </div>
               ) : (
                 <div className="flex flex-col gap-4">
-                  {[
-                    {
-                      id: "VA-102",
-                      origin: "São Paulo (GRU)",
-                      dest: "Rio de Janeiro (GIG)",
-                      aircraft: "Gulfstream G650ER",
-                      registration: "PR-VNM",
-                      status: "Em Voo",
-                      statusColor: "accent",
-                      progress: 68,
-                      pilot: "Capt. Carlos Silva",
-                      depTime: "09:20",
-                      arrTime: "10:15",
-                      weather: "Limpo • 22°C",
-                      impact: "Sem impacto",
-                    },
-                    {
-                      id: "VA-205",
-                      origin: "Miami (MIA)",
-                      dest: "Orlando (MCO)",
-                      aircraft: "Embraer Phenom 300E",
-                      registration: "PR-FLT",
-                      status: "Aguardando Embarque",
-                      statusColor: "warning",
-                      progress: 0,
-                      pilot: "Copiloto Lucas Costa",
-                      depTime: "11:30",
-                      arrTime: "12:15",
-                      weather: "Chuva Leve • 26°C",
-                      impact: "Atraso estimado: 10m",
-                    },
-                    {
-                      id: "VA-091",
-                      origin: "Lisboa (LIS)",
-                      dest: "New York (JFK)",
-                      aircraft: "Bombardier Global 7500",
-                      registration: "PR-AIR",
-                      status: "Em Solo (Preparação)",
-                      statusColor: "default",
-                      progress: 25,
-                      pilot: "Capt. Ana Oliveira",
-                      depTime: "14:00",
-                      arrTime: "21:30",
-                      weather: "Parcialmente Nublado • 18°C",
-                      impact: "Nenhum",
-                    }
-                  ].map((flight) => (
+                  {flights.length === 0 ? (
+                    <div className="text-center p-8 text-slate-500 text-sm">Nenhum voo encontrado.</div>
+                  ) : flights.map((flight) => (
                     <Card
                       key={flight.id}
                       className="bg-white/60 border border-white/80 rounded-2xl p-5 hover:bg-white/85 transition-all shadow-[0_4px_24px_-4px_rgba(79,119,186,0.04)] flex flex-col gap-4"
@@ -766,33 +755,33 @@ export default function Home() {
                       <div className="flex flex-wrap items-center justify-between gap-3 pb-2.5 border-b border-slate-100/50">
                         <div className="flex items-center gap-3">
                           <span className="text-xs font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100/40">
-                            {flight.id}
+                            {flight.flightCode || "VNM-000"}
                           </span>
-                          <span className="text-xs font-bold text-slate-800">{flight.aircraft} ({flight.registration})</span>
+                          <span className="text-xs font-bold text-slate-800">{fleet.find(a => String(a.id) === String(flight.aircraftId))?.model || "Aeronave"}</span>
                         </div>
                         <Chip
-                          color={flight.statusColor as "accent" | "warning" | "default"}
+                          color={flight.status === "Scheduled" ? "warning" : "accent"}
                           variant="soft"
                           size="sm"
                           className="font-bold text-[10px] uppercase h-5 min-w-0"
                         >
-                          {flight.status}
+                          {flight.status || "Agendado"}
                         </Chip>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
                         <div className="flex flex-col">
                           <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Rota</span>
-                          <span className="text-sm font-extrabold text-slate-700 mt-0.5">{flight.origin} → {flight.dest}</span>
+                          <span className="text-sm font-extrabold text-slate-700 mt-0.5">{flight.origin} → {flight.destination}</span>
                           <span className="text-[11px] text-slate-500 font-light mt-1 flex items-center gap-1">
                             <SvgIcon name="user-01" className="w-3.5 h-3.5 text-slate-400" />
-                            {flight.pilot}
+                            {crew.find(p => String(p.id) === String(flight.pilotId))?.name || "Piloto"}
                           </span>
                         </div>
 
                         <div className="flex flex-col">
                           <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Horários Previstos</span>
-                          <span className="text-sm font-extrabold text-slate-700 mt-0.5">{flight.depTime} → {flight.arrTime}</span>
+                          <span className="text-sm font-extrabold text-slate-700 mt-0.5">{flight.departureTime ? new Date(flight.departureTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "--:--"} → {flight.arrivalTime ? new Date(flight.arrivalTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "--:--"}</span>
                           <span className="text-[11px] text-slate-400 mt-1 flex items-center gap-1 font-mono">
                             <SvgIcon name="clock" className="w-3.5 h-3.5 text-slate-400" />
                             Hora Local UTC-3
@@ -803,21 +792,21 @@ export default function Home() {
                           <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Meteorologia Destino</span>
                           <span className="text-xs font-bold text-slate-700 mt-0.5 flex items-center gap-1">
                             <SvgIcon name="cloud-01" className="w-3.5 h-3.5 text-blue-500" />
-                            {flight.weather}
+                            N/A
                           </span>
-                          <span className="text-[10px] text-slate-500 font-medium mt-1 truncate">{flight.impact}</span>
+                          <span className="text-[10px] text-slate-500 font-medium mt-1 truncate">Dados em tempo real indisp.</span>
                         </div>
                       </div>
 
                       <div className="flex flex-col gap-1.5 mt-1.5">
                         <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold">
                           <span>Status da Preparação / Rota</span>
-                          <span>{flight.progress}%</span>
+                          <span>{calculateProgress(flight.departureTime, flight.arrivalTime)}%</span>
                         </div>
                         <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200/10">
                           <div
                             className="bg-blue-600 h-full rounded-full transition-all duration-500"
-                            style={{ width: `${flight.progress}%` }}
+                            style={{ width: `${calculateProgress(flight.departureTime, flight.arrivalTime)}%` }}
                           />
                         </div>
                       </div>
@@ -841,12 +830,9 @@ export default function Home() {
               </div>
 
               <div className="flex flex-col gap-3">
-                {[
-                  { id: "H-882", route: "Miami (MIA) → São Paulo (GRU)", date: "22/03/2026", ac: "Gulfstream G650ER", time: "8h 15m", fuel: "32.400 L", pilot: "Capt. Ana Oliveira", status: "Concluído" },
-                  { id: "H-881", route: "New York (JFK) → Miami (MIA)", date: "20/03/2026", ac: "Bombardier Global 7500", time: "2h 45m", fuel: "11.100 L", pilot: "Capt. Carlos Silva", status: "Concluído" },
-                  { id: "H-880", route: "Brasília (BSB) → São Paulo (GRU)", date: "18/03/2026", ac: "Embraer Phenom 300E", time: "1h 10m", fuel: "3.200 L", pilot: "Copiloto Lucas Costa", status: "Concluído" },
-                  { id: "H-879", route: "São Paulo (GRU) → Lisboa (LIS)", date: "15/03/2026", ac: "Bombardier Global 7500", time: "9h 30m", fuel: "41.000 L", pilot: "Capt. Ana Oliveira", status: "Concluído" },
-                ].map((log) => (
+                {flights.filter(f => f.status === "Completed").length === 0 ? (
+                  <div className="text-center p-8 text-slate-500 text-sm">Nenhum voo no histórico.</div>
+                ) : flights.filter(f => f.status === "Completed").map((log) => (
                   <Card
                     key={log.id}
                     className="bg-white/60 border border-white/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-white/95 transition-all shadow-[0_2px_12px_rgba(79,119,186,0.02)]"
@@ -857,32 +843,54 @@ export default function Home() {
                       </div>
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-bold text-slate-800">{log.route}</span>
+                          <span className="text-sm font-bold text-slate-800">{log.origin} → {log.destination}</span>
                           <span className="text-[9px] bg-slate-100 border border-slate-200/50 text-slate-500 font-mono px-1.5 py-0.5 rounded">
-                            {log.id}
+                            {log.flightCode || log.id}
                           </span>
                         </div>
                         <div className="text-[11px] text-slate-400 mt-1 flex items-center gap-2 flex-wrap">
-                          <span>{log.date}</span>
+                          <span>{log.departureTime ? new Date(log.departureTime).toLocaleDateString() : "--"}</span>
                           <span>•</span>
-                          <span>Aeronave: {log.ac}</span>
+                          <span>Aeronave: {fleet.find(a => String(a.id) === String(log.aircraftId))?.model || "Aeronave"}</span>
                           <span>•</span>
-                          <span>Piloto: {log.pilot}</span>
+                          <span>Piloto: {crew.find(p => String(p.id) === String(log.pilotId))?.name || "Piloto"}</span>
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between sm:justify-end gap-6 border-t sm:border-t-0 border-slate-100/50 pt-3 sm:pt-0">
                       <div className="text-right">
-                        <span className="text-xs font-bold text-slate-700">{log.time}</span>
-                        <p className="text-[10px] text-slate-400">Consumo: {log.fuel}</p>
+                        <span className="text-xs font-bold text-slate-700">Concluído</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Chip color="success" size="sm" variant="soft" className="font-bold text-[9px] h-5 min-w-0">
                           {log.status}
                         </Chip>
                         <div title="Baixar relatório de voo">
-                          <Button isIconOnly size="sm" variant="ghost" className="border-none text-slate-400 hover:text-blue-500 rounded-lg min-w-0 w-8 h-8">
+                          <Button 
+                            isIconOnly 
+                            size="sm" 
+                            variant="ghost" 
+                            className="border-none text-slate-400 hover:text-blue-500 rounded-lg min-w-0 w-8 h-8"
+                            onClick={() => {
+                              const token = document.cookie.split('; ').find(row => row.startsWith('auth_token='))?.split('=')[1];
+                              fetch(`https://vnmb-air-backend.onrender.com/api/flights/${log.id}/report`, {
+                                headers: {
+                                  'Authorization': `Bearer ${token}`
+                                }
+                              })
+                              .then(res => res.blob())
+                              .then(blob => {
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `manifesto-${log.flightCode}.pdf`;
+                                a.click();
+                                window.URL.revokeObjectURL(url);
+                              })
+                              .catch(err => console.error("Erro ao baixar PDF:", err));
+                            }}
+                          >
                             <SvgIcon name="download-01" className="w-4 h-4" />
                           </Button>
                         </div>
@@ -901,215 +909,62 @@ export default function Home() {
                   <span className="w-2 h-2 rounded-full bg-blue-600"></span>
                   Monitor Meteorológico - Hubs de Aviação
                 </h2>
-                <span className="text-xs text-slate-500 font-medium">Atualizado há 5 minutos</span>
+                <span className="text-xs text-slate-500 font-medium">Dados reais via Open-Meteo</span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[
-                  { hub: "São Paulo (GRU)", temp: "22°C", cond: "Limpo", wind: "12 kt NE", vis: "> 10 km", runway: "Seca", impact: "Excelente", impactColor: "success" },
-                  { hub: "Miami (MIA)", temp: "28°C", cond: "Chuva Isolada", wind: "18 kt SE", vis: "8 km", runway: "Molhada", impact: "Atenção Média", impactColor: "warning" },
-                  { hub: "Rio de Janeiro (GIG)", temp: "25°C", cond: "Parcialmente Nublado", wind: "8 kt S", vis: "> 10 km", runway: "Seca", impact: "Excelente", impactColor: "success" },
-                  { hub: "Lisboa (LIS)", temp: "19°C", cond: "Nublado", wind: "14 kt NW", vis: "9 km", runway: "Seca", impact: "Excelente", impactColor: "success" },
-                  { hub: "New York (JFK)", temp: "11°C", cond: "Nevoeiro Matinal", wind: "5 kt W", vis: "3 km", runway: "Úmida", impact: "Impacto Baixo (Visibilidade)", impactColor: "warning" },
-                  { hub: "Brasília (BSB)", temp: "24°C", cond: "Limpo", wind: "10 kt E", vis: "> 10 km", runway: "Seca", impact: "Excelente", impactColor: "success" }
-                ].map((weather, idx) => (
-                  <Card
-                    key={idx}
-                    className="bg-white/60 border border-white/80 rounded-2xl p-5 flex flex-col justify-between gap-4 shadow-[0_4px_24px_-4px_rgba(79,119,186,0.02)]"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="text-sm font-bold text-slate-800">{weather.hub}</h3>
-                        <p className="text-[10px] text-slate-400 font-medium mt-0.5">METAR Ativo</p>
-                      </div>
-                      <Chip color={weather.impactColor as "success" | "warning"} variant="soft" size="sm" className="font-bold text-[9px] h-5 min-w-0">
-                        {weather.impact}
-                      </Chip>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3 border-t border-b border-slate-100/50 py-3 bg-slate-50/20 px-3 rounded-xl">
-                      <div>
-                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Temperatura</span>
-                        <div className="text-base font-extrabold text-slate-700 mt-0.5 flex items-center gap-1.5">
-                          <SvgIcon name="sun" className="w-4 h-4 text-amber-500 animate-pulse" />
-                          {weather.temp} ({weather.cond})
-                        </div>
-                      </div>
-                      <div>
-                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Ventos</span>
-                        <p className="text-xs font-bold text-slate-700 mt-0.5 flex items-center gap-1">
-                          <SvgIcon name="activity" className="w-3.5 h-3.5 text-blue-500" />
-                          {weather.wind}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-between items-center text-[10px] text-slate-500">
-                      <span>Visibilidade: <strong>{weather.vis}</strong></span>
-                      <span>Pista: <strong>{weather.runway}</strong></span>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {activeTab === "roteamento" && (
-            <div className="flex flex-col gap-4 animate-fade-in">
-              <div className="flex items-center justify-between pb-1 border-b border-slate-200/40">
-                <h2 className="text-sm font-bold text-slate-800 tracking-wide uppercase flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
-                  Otimização de Rota por Inteligência Artificial
-                </h2>
-                <span className="text-[10px] text-blue-600 bg-blue-50 border border-blue-100 px-2.5 py-0.5 rounded-full font-bold uppercase">
-                  IA ativa
-                </span>
-              </div>
-
-              <Card className="bg-white/60 border border-white/80 rounded-2xl p-5 flex flex-col gap-4 shadow-[0_4px_24px_-4px_rgba(79,119,186,0.02)]">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1">Aeroporto de Origem</label>
-                    <Select
-                      value={routeOrigin}
-                      onChange={(key) => setRouteOrigin(key as Key)}
-                      aria-label="Origem Rota"
-                    >
-                      <Select.Trigger className="bg-white border border-slate-200/40 rounded-xl px-3 py-2 text-slate-700 font-semibold flex items-center justify-between gap-1 hover:border-slate-200/80 transition-colors text-xs h-11">
-                        <Select.Value />
-                        <Select.Indicator />
-                      </Select.Trigger>
-                      <Select.Popover className="border border-slate-200 shadow-lg rounded-2xl bg-white/95 backdrop-blur-xl">
-                        <ListBox>
-                          {airports.map(a => <ListBox.Item key={a.id} id={a.id}>{a.name}</ListBox.Item>)}
-                        </ListBox>
-                      </Select.Popover>
-                    </Select>
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1">Aeroporto de Destino</label>
-                    <Select
-                      value={routeDest}
-                      onChange={(key) => setRouteDest(key as Key)}
-                      aria-label="Destino Rota"
-                    >
-                      <Select.Trigger className="bg-white border border-slate-200/40 rounded-xl px-3 py-2 text-slate-700 font-semibold flex items-center justify-between gap-1 hover:border-slate-200/80 transition-colors text-xs h-11">
-                        <Select.Value />
-                        <Select.Indicator />
-                      </Select.Trigger>
-                      <Select.Popover className="border border-slate-200 shadow-lg rounded-2xl bg-white/95 backdrop-blur-xl">
-                        <ListBox>
-                          {airports.map(a => <ListBox.Item key={a.id} id={a.id}>{a.name}</ListBox.Item>)}
-                        </ListBox>
-                      </Select.Popover>
-                    </Select>
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1">Aeronave Escalada</label>
-                    <Select
-                      value={routeAircraft}
-                      onChange={(key) => setRouteAircraft(key as Key)}
-                      aria-label="Aeronave Rota"
-                    >
-                      <Select.Trigger className="bg-white border border-slate-200/40 rounded-xl px-3 py-2 text-slate-700 font-semibold flex items-center justify-between gap-1 hover:border-slate-200/80 transition-colors text-xs h-11">
-                        <Select.Value />
-                        <Select.Indicator />
-                      </Select.Trigger>
-                      <Select.Popover className="border border-slate-200 shadow-lg rounded-2xl bg-white/95 backdrop-blur-xl">
-                        <ListBox>
-                          {aircraftFleet.map(ac => (
-                            <ListBox.Item key={ac.id} id={ac.id} textValue={ac.name}>
-                              <div className="flex flex-col">
-                                <span className="font-bold text-xs">{ac.name}</span>
-                                <span className="text-[9px] text-slate-400">Alcance: {ac.range.toLocaleString()} km</span>
-                              </div>
-                            </ListBox.Item>
-                          ))}
-                        </ListBox>
-                      </Select.Popover>
-                    </Select>
-                  </div>
-                </div>
-
-                <Button
-                  isPending={isRoutingLoading}
-                  onPress={handleCalculateRoute}
-                  className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold h-11 rounded-xl transition-all shadow-md shadow-blue-500/10 flex items-center justify-center gap-2 mt-2"
-                >
-                  {({ isPending }) => (
-                    <>
-                      {isPending ? <Spinner color="current" size="sm" /> : <SvgIcon name="route" className="w-4 h-4 text-white" />}
-                      <span>{isPending ? "Otimizando..." : "Otimizar Rota por IA"}</span>
-                    </>
-                  )}
-                </Button>
-              </Card>
-
-              {isRoutingLoading ? (
-                <Card className="bg-white/60 border border-white/80 rounded-2xl p-8 flex flex-col items-center justify-center gap-4 shadow-sm animate-fade-in">
+              {isWeatherLoading ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-4">
                   <Spinner size="lg" color="accent" />
-                  <span className="text-sm font-semibold text-slate-500 animate-pulse">A Inteligência Artificial está calculando a rota ideal...</span>
-                </Card>
-              ) : routeResult && (
-                <Card className="bg-white border border-slate-200/40 rounded-2xl p-5 flex flex-col gap-5 shadow-[0_4px_24px_-4px_rgba(79,119,186,0.04)] animate-fade-in">
-                  <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
-                    <div>
-                      <h3 className="text-sm font-bold text-slate-800">Resultado do Plano de Voo Inteligente</h3>
-                      <p className="text-[10px] text-slate-400 mt-0.5">Operado por {routeResult.aircraftName}</p>
-                    </div>
-                    <Chip color="success" size="sm" variant="soft" className="font-bold text-[9px] uppercase">
-                      Rota Gerada
-                    </Chip>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] text-slate-400 font-bold uppercase">Distância Total</span>
-                      <span className="text-sm font-extrabold text-slate-700 mt-0.5">{routeResult.distance.toLocaleString()} km</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[10px] text-slate-400 font-bold uppercase">Tempo de Voo Estimado</span>
-                      <span className="text-sm font-extrabold text-slate-700 mt-0.5">{routeResult.totalTime}</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[10px] text-slate-400 font-bold uppercase">Combustível Otimizado</span>
-                      <span className="text-sm font-extrabold text-slate-700 mt-0.5">{routeResult.fuel}</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[10px] text-slate-400 font-bold uppercase">Redução de Emissões</span>
-                      <span className="text-sm font-extrabold text-emerald-600 mt-0.5">{routeResult.co2}</span>
-                    </div>
-                  </div>
-
-                  <div className="bg-slate-50/70 border border-slate-100/50 p-4 rounded-xl flex flex-col gap-3">
-                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Passos das Pernas de Voo</span>
-                    <div className="flex flex-col gap-3 relative pl-6 before:absolute before:left-[9px] before:top-2 before:bottom-2 before:w-[1.5px] before:bg-slate-200">
-                      {routeResult.legs.map((leg: any, idx: number) => (
-                        <div key={idx} className="flex flex-col relative gap-1">
-                          <div className="absolute -left-[23px] top-0.5 w-4 h-4 rounded-full bg-blue-100 text-blue-600 border border-blue-200 flex items-center justify-center text-[9px] font-bold">
-                            {idx + 1}
-                          </div>
-                          <span className="text-xs font-bold text-slate-800">
-                            Perna {idx + 1}: {leg.from} → {leg.to} ({leg.dist} km)
-                          </span>
-                          <span className="text-[10px] text-slate-500 font-light leading-none">
-                            Tempo estimado: {leg.time} • Status: {leg.status}
-                          </span>
+                  <span className="text-sm font-semibold text-slate-500 animate-pulse">Consultando satélites meteorológicos...</span>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {weatherData.map((weather, idx) => (
+                    <Card
+                      key={idx}
+                      className="bg-white/60 border border-white/80 rounded-2xl p-5 flex flex-col justify-between gap-4 shadow-[0_4px_24px_-4px_rgba(79,119,186,0.02)]"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h3 className="text-sm font-bold text-slate-800">{weather.hub}</h3>
+                          <p className="text-[10px] text-slate-400 font-medium mt-0.5">METAR Ativo</p>
                         </div>
-                      ))}
-                    </div>
-                  </div>
+                        <Chip color={weather.impactColor as "success" | "warning" | "default"} variant="soft" size="sm" className="font-bold text-[9px] h-5 min-w-0">
+                          {weather.impact}
+                        </Chip>
+                      </div>
 
-                  <div className="flex items-center gap-2 text-[10px] text-slate-500 bg-emerald-50/50 border border-emerald-100/30 p-2.5 rounded-xl">
-                    <SvgIcon name="check-circle" className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span><strong>Nota da IA:</strong> {routeResult.efficiency} com base no vento em altitude média e reserva obrigatória de combustível regulamentada.</span>
-                  </div>
-                </Card>
+                      <div className="grid grid-cols-2 gap-3 border-t border-b border-slate-100/50 py-3 bg-slate-50/20 px-3 rounded-xl">
+                        <div>
+                          <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Temperatura</span>
+                          <div className="text-base font-extrabold text-slate-700 mt-0.5 flex items-center gap-1.5">
+                            <SvgIcon name="sun" className="w-4 h-4 text-amber-500 animate-pulse" />
+                            {weather.temp} ({weather.cond})
+                          </div>
+                        </div>
+                        <div>
+                          <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Ventos</span>
+                          <p className="text-xs font-bold text-slate-700 mt-0.5 flex items-center gap-1">
+                            <SvgIcon name="activity" className="w-3.5 h-3.5 text-blue-500" />
+                            {weather.wind}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between items-center text-[10px] text-slate-500">
+                        <span>Visibilidade: <strong>{weather.vis}</strong></span>
+                        <span>Pista: <strong>{weather.runway}</strong></span>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
               )}
             </div>
           )}
+
+
+
+
         </div>
 
         <div className="lg:col-span-4 flex flex-col gap-6">
@@ -1134,10 +989,10 @@ export default function Home() {
 
             <div className="flex flex-col gap-3">
               {[
-                { title: "Frota Ativa", value: "3 Aeronaves", desc: "100% da frota operacional", icon: "plane" },
-                { title: "Pilotos Escalados", value: "3 Operacionais", desc: "Nenhuma pendência médica", icon: "user-01" },
-                { title: "Meta de Eficiência", value: "98.4%", desc: "+1.2% otimização por IA", icon: "activity" },
-                { title: "Próximo Pouso", value: "10:15 - GIG", desc: "Voo VA-102 (PR-VNM)", icon: "clock" },
+                { title: "Frota Ativa", value: `${fleet.length} Aeronaves`, desc: "100% da frota operacional", icon: "plane" },
+                { title: "Pilotos Escalados", value: `${crew.length} Operacionais`, desc: "Nenhuma pendência médica", icon: "user-01" },
+                { title: "Voos Agendados", value: `${flights.length} Registros`, desc: "Integrado ao painel", icon: "activity" },
+                { title: "Próximo Voo", value: flights.length > 0 && flights[0].departureTime ? `${new Date(flights[0].departureTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${flights[0].origin}` : "--", desc: flights.length > 0 ? (flights[0].flightCode || "VA-000") : "Sem voos", icon: "clock" },
               ].map((stat, idx) => (
                 <div key={idx} className="flex items-center gap-3.5 p-3 rounded-2xl bg-white/40 border border-white/50 hover:bg-white/70 transition-all">
                   <div className="w-9 h-9 rounded-xl bg-blue-50/50 text-blue-600 border border-blue-100/30 flex items-center justify-center shrink-0">
@@ -1164,3 +1019,4 @@ export default function Home() {
     </div>
   );
 }
+
