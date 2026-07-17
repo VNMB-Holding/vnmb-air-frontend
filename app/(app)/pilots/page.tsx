@@ -1,69 +1,27 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, Avatar, Chip, Button, Tooltip, Spinner, toast } from "@heroui/react";
 import { SvgIcon } from "@/components/SvgIcon";
 
-export default function PilotsPage() {
-  const crew = [
-    {
-      id: "carlos",
-      name: "Capt. Carlos Silva",
-      role: "Comandante",
-      hours: "12.500 hrs",
-      status: "Disponível",
-      statusColor: "success",
-      aircraft: "Gulfstream G650ER",
-      initials: "CS",
-      license: "PLA-A 142095",
-      medicalExpiry: "15/10/2026",
-      safetyRating: "100%",
-      flightsThisMonth: 14,
-      efficiencyIndex: "98.7%",
-      upcomingFlights: [
-        { id: "VA-102", route: "GRU → GIG", time: "Hoje, 09:20", status: "Confirmado" },
-        { id: "VA-095", route: "GIG → BSB", time: "Amanhã, 14:00", status: "Programado" }
-      ]
-    },
-    {
-      id: "lucas",
-      name: "Copiloto Lucas Costa",
-      role: "Primeiro Oficial",
-      hours: "4.200 hrs",
-      status: "Em Voo",
-      statusColor: "primary",
-      aircraft: "Bombardier Global 7500",
-      initials: "LC",
-      license: "PC-A 198302",
-      medicalExpiry: "24/11/2026",
-      safetyRating: "99.8%",
-      flightsThisMonth: 22,
-      efficiencyIndex: "97.4%",
-      upcomingFlights: [
-        { id: "VA-205", route: "MIA → MCO", time: "Hoje, 11:30", status: "Em Rota" }
-      ]
-    },
-    {
-      id: "ana",
-      name: "Capt. Ana Oliveira",
-      role: "Comandante",
-      hours: "9.800 hrs",
-      status: "Em Folga",
-      statusColor: "default",
-      aircraft: "Embraer Phenom 300E",
-      initials: "AO",
-      license: "PLA-A 115049",
-      medicalExpiry: "12/08/2026",
-      safetyRating: "100%",
-      flightsThisMonth: 8,
-      efficiencyIndex: "99.1%",
-      upcomingFlights: [
-        { id: "VA-091", route: "LIS → JFK", time: "26/03/2026, 14:00", status: "Confirmado" }
-      ]
-    },
-  ];
+import { getPilots, Pilot } from "@/services/pilots";
 
-  const [selectedId, setSelectedId] = useState<string>("carlos");
+export default function PilotsPage() {
+  const [crew, setCrew] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      const data = await getPilots();
+      if (data) {
+        setCrew(data);
+      }
+      setIsLoading(false);
+    }
+    loadData();
+  }, []);
+
+  const [selectedId, setSelectedId] = useState<string>("");
   const selectedPilot = crew.find((p) => p.id === selectedId) || crew[0];
   const [isEditingScale, setIsEditingScale] = useState(false);
 
@@ -95,8 +53,14 @@ export default function PilotsPage() {
           </h3>
 
           <div className="flex flex-col gap-3">
-            {crew.map((pilot) => {
+            {isLoading ? (
+              <div className="flex justify-center p-10"><Spinner size="lg" /></div>
+            ) : crew.length === 0 ? (
+              <p className="text-sm text-slate-500">Nenhum piloto encontrado.</p>
+            ) : crew.map((pilot) => {
               const isSelected = pilot.id === selectedId;
+              const initials = pilot.name ? pilot.name.substring(0, 2).toUpperCase() : "NA";
+              const statusColor = pilot.status === "ACTIVE" ? "success" : pilot.status === "INACTIVE" ? "default" : "accent";
               return (
                 <Card
                   key={pilot.id}
@@ -109,15 +73,15 @@ export default function PilotsPage() {
                   <div className="flex flex-wrap items-center justify-between gap-3 pb-2.5 border-b border-slate-100/50">
                     <div className="flex items-center gap-3">
                       <Avatar className="w-9 h-9 text-xs font-bold border border-slate-200/60 shadow-xs bg-gradient-to-br from-blue-50 to-blue-100 text-blue-700">
-                        {pilot.initials}
+                        {initials}
                       </Avatar>
                       <div className="flex flex-col min-w-0">
                         <span className="text-xs font-bold text-slate-700 truncate">{pilot.name}</span>
-                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{pilot.role}</span>
+                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{pilot.licenseNumber || "N/A"}</span>
                       </div>
                     </div>
                     <Chip
-                      color={pilot.statusColor === "primary" ? "accent" : (pilot.statusColor as "success" | "default")}
+                      color={statusColor}
                       variant="soft"
                       size="sm"
                       className="font-bold text-[9px] uppercase h-5 min-w-0"
@@ -131,11 +95,11 @@ export default function PilotsPage() {
                       <span className="text-[9px] text-slate-400 font-bold uppercase">Habilitação</span>
                       <h4 className="text-sm font-extrabold text-slate-800 leading-snug flex items-center gap-1.5 mt-0.5">
                         <SvgIcon name="plane" className="w-4 h-4 text-slate-400 rotate-45" />
-                        {pilot.aircraft}
+                        {pilot.aircraft || "--"}
                       </h4>
                     </div>
                     <div className="text-right">
-                      <span className="text-xs font-extrabold text-slate-700">{pilot.hours}</span>
+                      <span className="text-xs font-extrabold text-slate-700">{pilot.hoursFlown || "-- hrs"}</span>
                       <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wider">Horas de Voo</p>
                     </div>
                   </div>
@@ -150,7 +114,8 @@ export default function PilotsPage() {
             Ficha Cadastral e Escala do Piloto
           </h3>
 
-          <Card className="bg-white/60 border border-white/80 backdrop-blur-xl rounded-3xl p-6 shadow-[0_12px_40px_-8px_rgba(79,119,186,0.06)] flex flex-col gap-6">
+          {selectedPilot ? (
+            <Card className="bg-white/60 border border-white/80 backdrop-blur-xl rounded-3xl p-6 shadow-[0_12px_40px_-8px_rgba(79,119,186,0.06)] flex flex-col gap-6">
             <div className="flex flex-wrap items-center justify-between gap-4 pb-4.5 border-b border-slate-100/60">
               <div className="flex items-center gap-4">
                 <Avatar className="w-14 h-14 text-lg font-bold border border-slate-200/60 shadow-xs bg-gradient-to-br from-blue-50 to-blue-100 text-blue-700">
@@ -161,25 +126,25 @@ export default function PilotsPage() {
                   <h2 className="text-xl font-extrabold text-slate-800 leading-snug mt-0.5">{selectedPilot.name}</h2>
                   <span className="text-xs font-semibold text-slate-500 font-mono mt-1 flex items-center gap-1.5">
                     <SvgIcon name="clipboard-check" className="w-4 h-4 text-slate-400" />
-                    CHT: {selectedPilot.license} • Venc. Médico: {selectedPilot.medicalExpiry}
+                    CHT: {selectedPilot.licenseNumber} • Venc. Médico: {new Date(selectedPilot.medicalExpiry).toLocaleDateString('pt-BR')}
                   </span>
                 </div>
               </div>
 
               <Chip
-                color={selectedPilot.statusColor === "primary" ? "accent" : (selectedPilot.statusColor as "success" | "default")}
+                color={selectedPilot?.status === "ACTIVE" ? "success" : "default"}
                 variant="soft"
                 size="sm"
                 className="font-bold text-[10px] uppercase h-5.5 min-w-0 px-3"
               >
-                {selectedPilot.status}
+                {selectedPilot?.status || "N/A"}
               </Chip>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 border-t border-b border-slate-100/50 py-4 bg-slate-50/20 px-4 rounded-2xl">
               <div>
                 <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Total Acumulado</span>
-                <p className="text-base font-extrabold text-slate-700 mt-1">{selectedPilot.hours}</p>
+                <p className="text-base font-extrabold text-slate-700 mt-1">{selectedPilot.hoursFlown}</p>
               </div>
               <div>
                 <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Escalas do Mês</span>
@@ -191,14 +156,14 @@ export default function PilotsPage() {
               </div>
               <div>
                 <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Score Combustível</span>
-                <p className="text-base font-extrabold text-blue-900 mt-1">{selectedPilot.efficiencyIndex}</p>
+                <p className="text-base font-extrabold text-blue-900 mt-1">{selectedPilot.fuelEfficiencyScore}</p>
               </div>
             </div>
 
             <div className="flex flex-col gap-3.5">
               <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Escala Futura Próximos Voos</span>
               <div className="flex flex-col gap-3">
-                {selectedPilot.upcomingFlights.map((flight, idx) => (
+                {selectedPilot?.upcomingFlights?.length ? selectedPilot.upcomingFlights.map((flight: any, idx: number) => (
                   <div
                     key={idx}
                     className="bg-white/40 border border-white/50 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-white/80 transition-all"
@@ -216,12 +181,14 @@ export default function PilotsPage() {
                       color={flight.status === "Em Rota" ? "accent" : "success"}
                       variant="soft"
                       size="sm"
-                      className="font-bold text-[8.5px] uppercase h-5 min-w-0"
+                      className="font-bold text-[9px] uppercase h-5 min-w-0"
                     >
                       {flight.status}
                     </Chip>
                   </div>
-                ))}
+                )) : (
+                  <p className="text-sm text-slate-500">Nenhum voo programado.</p>
+                )}
               </div>
             </div>
 
@@ -254,7 +221,13 @@ export default function PilotsPage() {
                 </Button>
               </div>
             </div>
-          </Card>
+            </Card>
+          ) : (
+            <Card className="bg-white/60 border border-white/80 backdrop-blur-xl rounded-3xl p-10 flex flex-col items-center justify-center text-slate-400 gap-3 min-h-[400px]">
+              <SvgIcon name="user-01" className="w-10 h-10 text-slate-300" />
+              <p>Nenhum piloto selecionado.</p>
+            </Card>
+          )}
         </div>
       </div>
     </div>
