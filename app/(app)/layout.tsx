@@ -49,32 +49,25 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(timer);
   }, [pathname]);
 
-  const notifications = [
-    {
-      id: 1,
-      title: "Plano de Voo Aprovado",
-      desc: "Rota PR-VNM (GRU → MIA) aprovada pela ANAC.",
-      time: "10 min atrás",
-      type: "success",
-      icon: "clipboard-check",
-    },
-    {
-      id: 2,
-      title: "Alerta de Tripulação",
-      desc: "Exame médico do Capt. Carlos expirando em breve.",
-      time: "2 horas atrás",
-      type: "warning",
-      icon: "user-01",
-    },
-    {
-      id: 3,
-      title: "Clima em Destino",
-      desc: "Ventos fortes de cauda reportados no Galeão (GIG).",
-      time: "5 horas atrás",
-      type: "info",
-      icon: "activity",
-    },
-  ];
+  const [notifications, setNotifications] = useState<any[]>([]);
+
+  useEffect(() => {
+    import("@/services/notifications").then((m) => {
+      m.getAlerts().then((data) => {
+        if (data) {
+          const mapped = data.map((alert: any) => ({
+            id: alert.id,
+            title: alert.title,
+            desc: alert.message,
+            time: new Date(alert.createdAt).toLocaleDateString("pt-BR"),
+            type: alert.type === "INFO" ? "info" : alert.type === "WARNING" ? "warning" : "success",
+            icon: alert.type === "WARNING" ? "alert-triangle" : alert.type === "INFO" ? "info-circle" : "bell-02"
+          }));
+          setNotifications(mapped);
+        }
+      });
+    });
+  }, []);
 
   const menuItems = [
     { id: "home", label: "Home", icon: "home-01", path: "/" },
@@ -147,7 +140,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                 <Popover.Trigger className="bg-white/50 relative p-2 rounded-full text-slate-500 hover:text-slate-800 transition-colors flex items-center justify-center active:scale-95 cursor-pointer">
                   <SvgIcon name="bell-02" className="w-5 h-5" />
                 </Popover.Trigger>
-                <Badge color="danger" size="sm" />
+                {notifications.length > 0 && <Badge color="danger" size="sm" />}
               </Badge.Anchor>
               <Popover.Content placement="bottom end" className="w-80 bg-white/95 border border-slate-200/60 backdrop-blur-2xl rounded-3xl p-0 shadow-xl z-50">
                 <Popover.Dialog className="outline-none p-4 flex flex-col gap-3">
