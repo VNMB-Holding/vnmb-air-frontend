@@ -1,63 +1,29 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, Chip, Button, Spinner, toast } from "@heroui/react";
 import { SvgIcon } from "@/components/SvgIcon";
 
-export default function AircraftPage() {
-  const fleet = [
-    {
-      id: "g650",
-      model: "Gulfstream G650ER",
-      registration: "PR-VNM",
-      capacity: "16 Passageiros",
-      range: "13.900 km",
-      status: "Em Voo",
-      statusColor: "accent",
-      speed: "Mach 0.925 (982 km/h)",
-      ceiling: "51.000 ft (15.545 m)",
-      engines: "2x Rolls-Royce BR725",
-      fuelBurn: "1.500 L/h",
-      nextInspection: "18/06/2026",
-      hoursFlown: "2.420 hrs",
-      costPerHour: "R$ 28.000,00",
-    },
-    {
-      id: "global7500",
-      model: "Bombardier Global 7500",
-      registration: "PR-AIR",
-      capacity: "19 Passageiros",
-      range: "14.260 km",
-      status: "Disponível",
-      statusColor: "success",
-      speed: "Mach 0.925 (982 km/h)",
-      ceiling: "51.000 ft (15.545 m)",
-      engines: "2x GE Passport",
-      fuelBurn: "1.650 L/h",
-      nextInspection: "24/09/2026",
-      hoursFlown: "1.150 hrs",
-      costPerHour: "R$ 31.000,00",
-    },
-    {
-      id: "phenom300",
-      model: "Embraer Phenom 300E",
-      registration: "PR-FLT",
-      capacity: "9 Passageiros",
-      range: "3.720 km",
-      status: "Manutenção",
-      statusColor: "warning",
-      speed: "833 km/h",
-      ceiling: "45.000 ft (13.716 m)",
-      engines: "2x Pratt & Whitney PW535E1",
-      fuelBurn: "700 L/h",
-      nextInspection: "12/04/2026",
-      hoursFlown: "3.890 hrs",
-      costPerHour: "R$ 14.500,00",
-    },
-  ];
+import { getAircrafts, Aircraft } from "@/services/aircraft";
 
-  const [selectedId, setSelectedId] = useState<string>("g650");
+export default function AircraftPage() {
+  const [fleet, setFleet] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      const data = await getAircrafts();
+      if (data) {
+        setFleet(data);
+      }
+      setIsLoading(false);
+    }
+    loadData();
+  }, []);
+
+  const [selectedId, setSelectedId] = useState<string>("");
   const selectedAircraft = fleet.find((ac) => ac.id === selectedId) || fleet[0];
+
   const [isScheduling, setIsScheduling] = useState(false);
 
   const handleSchedule = () => {
@@ -88,8 +54,13 @@ export default function AircraftPage() {
           </h3>
 
           <div className="flex flex-col gap-3">
-            {fleet.map((aircraft) => {
+            {isLoading ? (
+              <div className="flex justify-center p-10"><Spinner size="lg" /></div>
+            ) : fleet.length === 0 ? (
+              <p className="text-sm text-slate-500">Nenhuma aeronave encontrada.</p>
+            ) : fleet.map((aircraft) => {
               const isSelected = aircraft.id === selectedId;
+              const statusColor = aircraft.status === "MAINTENANCE" ? "warning" : aircraft.status === "IN_FLIGHT" ? "accent" : "success";
               return (
                 <Card
                   key={aircraft.id}
@@ -105,11 +76,11 @@ export default function AircraftPage() {
                         {aircraft.registration}
                       </span>
                       <span className="text-xs font-bold text-slate-700">
-                        {aircraft.model.split(" ")[0]}
+                        {aircraft.model ? aircraft.model.split(" ")[0] : "N/A"}
                       </span>
                     </div>
                     <Chip
-                      color={aircraft.statusColor as "accent" | "success" | "warning"}
+                      color={statusColor as "accent" | "success" | "warning"}
                       variant="soft"
                       size="sm"
                       className="font-bold text-[9px] uppercase h-5 min-w-0"
@@ -124,7 +95,7 @@ export default function AircraftPage() {
                       <p className="text-[10px] text-slate-400 font-light mt-0.5">Jato Corporativo Executivo</p>
                     </div>
                     <div className="text-right">
-                      <span className="text-xs font-extrabold text-slate-700">{aircraft.range}</span>
+                      <span className="text-xs font-extrabold text-slate-700">{aircraft.rangeKm ? `${aircraft.rangeKm} km` : "--"}</span>
                       <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wider">Alcance</p>
                     </div>
                   </div>
@@ -132,11 +103,11 @@ export default function AircraftPage() {
                   <div className="flex items-center justify-between pt-2.5 border-t border-slate-100/50 bg-slate-50/20 px-3 py-2 rounded-2xl">
                     <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
                       <SvgIcon name="user-01" className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Capacidade: <strong>{aircraft.capacity.split(" ")[0]}</strong></span>
+                      <span>Capacidade: <strong>{aircraft.capacity}</strong></span>
                     </div>
                     <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
                       <SvgIcon name="activity" className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Horas: <strong>{aircraft.hoursFlown}</strong></span>
+                      <span>Horas: <strong>{aircraft.totalHoursFlown || 0} hrs</strong></span>
                     </div>
                   </div>
                 </Card>
@@ -150,7 +121,8 @@ export default function AircraftPage() {
             Painel Técnico & Telemetria do Jato
           </h3>
 
-          <Card className="bg-white/60 border border-white/80 backdrop-blur-xl rounded-3xl p-6 shadow-[0_12px_40px_-8px_rgba(79,119,186,0.06)] flex flex-col gap-6">
+          {selectedAircraft ? (
+            <Card className="bg-white/60 border border-white/80 backdrop-blur-xl rounded-3xl p-6 shadow-[0_12px_40px_-8px_rgba(79,119,186,0.06)] flex flex-col gap-6">
             <div className="flex flex-wrap items-center justify-between gap-4 pb-3.5 border-b border-slate-100/60">
               <div>
                 <h2 className="text-xl font-extrabold text-slate-800">{selectedAircraft.model}</h2>
@@ -169,12 +141,12 @@ export default function AircraftPage() {
             </div>
 
             <div className="w-full h-[260px] bg-slate-950 rounded-2xl relative overflow-hidden flex flex-col items-center justify-center border border-slate-900 shadow-inner group">
-              {selectedAircraft.id === "g650" ? (
+              {selectedAircraft.model3DUrl ? (
                 <iframe
-                  title="Gulfstream G650"
+                  title={selectedAircraft.model}
                   allowFullScreen
                   allow="autoplay; fullscreen; xr-spatial-tracking"
-                  src="https://sketchfab.com/models/67451e56d38746de86667347d7a56587/embed?autostart=1&camera=0&preload=1&transparent=1"
+                  src={`${selectedAircraft.model3DUrl}?autostart=1&camera=0&preload=1&transparent=1`}
                   className="w-full h-full border-none rounded-2xl z-10"
                 />
               ) : selectedAircraft.id === "phenom300" ? (
@@ -314,7 +286,13 @@ export default function AircraftPage() {
                 </Button>
               </div>
             </div>
-          </Card>
+            </Card>
+          ) : (
+            <Card className="bg-white/60 border border-white/80 backdrop-blur-xl rounded-3xl p-10 flex flex-col items-center justify-center text-slate-400 gap-3 min-h-[400px]">
+              <SvgIcon name="plane" className="w-10 h-10 text-slate-300" />
+              <p>Nenhuma aeronave selecionada.</p>
+            </Card>
+          )}
         </div>
       </div>
     </div>
