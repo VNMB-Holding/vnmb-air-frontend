@@ -6,29 +6,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { TextField, Label, FieldError, toast, Button, Spinner } from "@heroui/react";
 
-const translateError = (msg: string) => {
-  if (!msg) return "E-mail ou senha incorretos.";
-  const lowerMsg = msg.toLowerCase();
-  if (lowerMsg.includes("invalid credentials") || lowerMsg.includes("invalid email or password") || lowerMsg.includes("mismatch")) {
-    return "E-mail ou senha incorretos.";
-  }
-  if (lowerMsg.includes("user not found")) {
-    return "Usuário não cadastrado.";
-  }
-  if (lowerMsg.includes("password") && (lowerMsg.includes("invalid") || lowerMsg.includes("incorrect"))) {
-    return "Senha incorreta.";
-  }
-  if (lowerMsg.includes("required")) {
-    return "Todos os campos são obrigatórios.";
-  }
-  if (lowerMsg.includes("unauthorized") || lowerMsg.includes("not authorized")) {
-    return "Acesso não autorizado.";
-  }
-  if (lowerMsg.includes("fetch") || lowerMsg.includes("failed to fetch") || lowerMsg.includes("network")) {
-    return "Não foi possível conectar ao servidor de autenticação.";
-  }
-  return msg;
-};
+import { loginAction } from "@/services/auth";
+import { translateError } from "@/utils/errors";
 
 function LoginForm() {
   const router = useRouter();
@@ -104,26 +83,11 @@ function LoginForm() {
                 }
                 setIsLoading(true);
                 try {
-                  const response = await fetch("https://vnmb-identity-api.onrender.com/api/auth/login", {
-                    method: "POST",
-                    headers: {
-                      "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({ email, password, client_id: "vnmb-air" }),
-                  });
+                  const result = await loginAction(email, password, rememberMe);
 
-                  if (!response.ok) {
-                    const errData = await response.json().catch(() => ({}));
-                    throw new Error(errData.message || "E-mail ou senha incorretos.");
+                  if (!result.success) {
+                    throw new Error(result.error);
                   }
-
-                  const data = await response.json();
-
-                  const cookieSuffix = rememberMe ? `; max-age=${60 * 60 * 24 * 7}` : ""; 
-                  document.cookie = `auth_token=${data.access_token}; path=/${cookieSuffix}; SameSite=Lax; Secure`;
-                  document.cookie = `refresh_token=${data.refresh_token}; path=/${cookieSuffix}; SameSite=Lax; Secure`;
-                  document.cookie = `user_name=${encodeURIComponent(data.user.name)}; path=/${cookieSuffix}; SameSite=Lax; Secure`;
-                  document.cookie = `user_email=${encodeURIComponent(data.user.email)}; path=/${cookieSuffix}; SameSite=Lax; Secure`;
 
                   if (rememberMe) {
                     localStorage.setItem("remembered_email", email);
